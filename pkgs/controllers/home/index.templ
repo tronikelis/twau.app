@@ -1,0 +1,15 @@
+package home
+
+import "word-amongus-game/pkgs/ui"
+
+templ pageIndex() {
+	@ui.Page() {
+		<div>
+			<label>
+				Name
+				<input type="text" name="player_name"/>
+			</label>
+			<button type="button">Create room</button>
+		</div>
+	}
+}
