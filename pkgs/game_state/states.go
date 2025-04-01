@@ -2,34 +2,50 @@ package game_state
 
 import "sync"
 
+type gameWithMutex struct {
+	game *Game
+	mu   *sync.Mutex
+}
+
 // Methods on this struct are concurrency safe
 type States struct {
-	byId map[string]*Game
+	byId map[string]gameWithMutex
 	mu   *sync.Mutex
 }
 
 func NewStates() States {
 	return States{
-		byId: map[string]*Game{},
+		byId: map[string]gameWithMutex{},
 		mu:   &sync.Mutex{},
 	}
 }
 
-// returns game or creates a new one
-func (self States) Upsert(gameId string) *Game {
+func (self States) HasGame(gameId string) bool {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
+	_, ok := self.byId[gameId]
+	return ok
+}
+
+func (self States) Game(gameId string, mutation func(game *Game)) {
+	self.mu.Lock()
+
 	game, ok := self.byId[gameId]
 	if !ok {
-		game = NewGame()
+		game.game = NewGame()
+		game.mu = &sync.Mutex{}
 	}
 	self.byId[gameId] = game
 
-	return game
+	self.mu.Unlock()
+
+	game.mu.Lock()
+	mutation(game.game)
+	game.mu.Unlock()
 }
 
-func (self States) Delete(gameId string) {
+func (self States) DeleteGame(gameId string) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 

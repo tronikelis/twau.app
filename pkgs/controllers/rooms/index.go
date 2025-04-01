@@ -23,9 +23,9 @@ func postIndex(ctx maruchi.ReqContext) {
 		panic(err)
 	}
 
-	game := req.GetStates(ctx).Upsert(gameId)
-
-	game.AddPlayer(game_state.NewPlayer(playerId, playerName))
+	req.GetStates(ctx).Game(gameId, func(game *game_state.Game) {
+		game.AddPlayer(game_state.NewPlayer(playerId, playerName))
+	})
 
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", gameId))
 

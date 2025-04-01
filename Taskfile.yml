@@ -1,0 +1,31 @@
+version: '3'
+
+tasks:
+  default:
+    cmd:
+      task: dev
+
+  dev:
+    deps:
+      # - task: build/tailwind
+      #   vars:
+      #     ARGS: "--watch"
+      - task: dev/templ
+      - task: dev/server
+
+  # build/tailwind:
+  #   cmd: npx -y @tailwindcss/cli -i ./main.css -o ./static/css/tw.css --minify {{.ARGS}} {{.CLI_ARGS}}
+
+  dev/templ:
+    cmd: templ generate --watch -v
+
+  dev/server:
+    cmd: |
+      go run github.com/air-verse/air@v1.61.7 \
+      --build.cmd "go build -o tmp/bin/main" --build.bin "tmp/bin/main" --build.delay "500" \
+      --build.exclude_dir "node_modules" \
+      --build.include_ext "go" \
+      --build.stop_on_error "true" \
+      --misc.clean_on_exit true
+    env:
+      PORT: 3000

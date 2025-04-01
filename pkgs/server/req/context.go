@@ -8,10 +8,14 @@ import (
 	"github.com/tronikelis/maruchi"
 )
 
+const (
+	statesKey int = iota
+)
+
 func InitContext(request *maruchi.ReqContextBase, states game_state.States) {
 	newContext := context.WithValue(
 		request.Context(),
-		game_state.States{},
+		statesKey,
 		states,
 	)
 
@@ -19,5 +23,5 @@ func InitContext(request *maruchi.ReqContextBase, states game_state.States) {
 }
 
 func GetStates(ctx maruchi.ReqContext) game_state.States {
-	return ctx.Context().Value(game_state.States{}).(game_state.States)
+	return ctx.Context().Value(statesKey).(game_state.States)
 }
