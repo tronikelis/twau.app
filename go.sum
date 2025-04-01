@@ -4,3 +4,5 @@ github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aN
 github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/tronikelis/maruchi v0.4.1-0.20250401102639-767de9c20a42 h1:KM4a+hQ2pgDxw5p8/PYQ1FISiMsb+pXPOTdXf9LEG/k=
 github.com/tronikelis/maruchi v0.4.1-0.20250401102639-767de9c20a42/go.mod h1:M6iQIrltjeyVp4TkRQsppnTWrdeyqFPYL1olYoZ+4ZQ=
+github.com/tronikelis/maruchi v0.4.1-0.20250401120744-86fc6b28c63f h1:5DVVB56JyEDsw3j8VUpEgmjY4Ib6R+dAqfiMamb5xlQ=
+github.com/tronikelis/maruchi v0.4.1-0.20250401120744-86fc6b28c63f/go.mod h1:M6iQIrltjeyVp4TkRQsppnTWrdeyqFPYL1olYoZ+4ZQ=

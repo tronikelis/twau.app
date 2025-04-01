@@ -2,6 +2,7 @@ package game_state
 
 import (
 	"container/ring"
+	"math/rand/v2"
 )
 
 type Player struct {
@@ -33,6 +34,21 @@ type Game struct {
 	word     string
 	synonyms []PlayerSynonym
 	players  *ring.Ring
+	// ඞ
+	imposter Player
+}
+
+func (self *Game) Start(word string) {
+	self.word = word
+
+	imposterIndex := rand.Uint32N(uint32(self.players.Len()))
+	imposter := self.players
+
+	for range imposterIndex {
+		imposter = imposter.Next()
+	}
+
+	self.imposter = imposter.Value.(Player)
 }
 
 func (self *Game) AddPlayer(player Player) {
@@ -44,10 +60,6 @@ func (self *Game) AddPlayer(player Player) {
 	}
 
 	self.players.Link(r)
-}
-
-func (self *Game) SetWord(word string) {
-	self.word = word
 }
 
 func (self *Game) PlayerTurn() *PlayerTurn {

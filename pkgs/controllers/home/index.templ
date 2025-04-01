@@ -4,12 +4,15 @@ import "word-amongus-game/pkgs/ui"
 
 templ pageIndex() {
 	@ui.Page() {
-		<div>
+		<form
+			hx-post="/rooms"
+			hx-swap="none"
+		>
 			<label>
 				Name
 				<input type="text" name="player_name"/>
 			</label>
-			<button type="button">Create room</button>
-		</div>
+			<button type="submit">Create room</button>
+		</form>
 	}
 }
