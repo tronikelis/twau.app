@@ -12,7 +12,7 @@ type Room struct {
 	mu          *sync.Mutex
 }
 
-func newRoom() *Room {
+func NewRoom() *Room {
 	return &Room{
 		WsRoom:      ws.NewRoom(),
 		UnsafeState: NewGame(),
@@ -75,7 +75,7 @@ func (self Rooms) CreateRoom(roomId string) (*Room, bool) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	room := newRoom()
+	room := NewRoom()
 	self.statesById[roomId] = room
 
 	return room, true
