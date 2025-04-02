@@ -30,12 +30,19 @@ func postIndex(ctx maruchi.ReqContext) {
 		panic("room already exists")
 	}
 
-	game, ok := state.State.(*game_state.Game)
-	if !ok {
-		panic("expected Game, got %T")
-	}
+	err = state.State(func(state game_state.GameState) error {
+		game, ok := state.(*game_state.Game)
+		if !ok {
+			return fmt.Errorf("expected *game_state.Game, got %T", state)
+		}
 
-	game.AddPlayer(game_state.NewPlayer(playerId, playerName))
+		game.AddPlayer(game_state.NewPlayer(playerId, playerName))
+
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
 
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))
 

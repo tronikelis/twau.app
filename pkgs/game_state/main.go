@@ -142,7 +142,8 @@ func (self *Game) AddPlayer(player Player) {
 		return
 	}
 
-	r := &ring.Ring{Value: player}
+	r := ring.New(1)
+	r.Value = player
 
 	if self.players == nil {
 		self.players = r

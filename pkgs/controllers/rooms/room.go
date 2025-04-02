@@ -2,6 +2,7 @@ package rooms
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -58,39 +59,61 @@ func wsRoomId(ctx maruchi.ReqContext) {
 
 	room, ok := reqContext.Rooms.Room(roomId)
 	if !ok {
-		panic("room already exists")
+		panic("room does not exist")
 	}
 
 	ws, err := wsUpgrader.Upgrade(ctx.Writer(), ctx.Req(), nil)
 	if err != nil {
 		panic(err)
 	}
-	defer ws.Close()
 
-	room.WsRoom.Add(ws)
-	defer room.WsRoom.Delete(ws)
+	room.State(func(state game_state.GameState) error {
+		state.Game().AddPlayer(game_state.NewPlayer(playerId.Value, playerName.Value))
+		return nil
+	})
+	defer room.State(func(state game_state.GameState) error { // 3. sync changes to others
+		state.Game().RemovePlayer(playerId.Value)
 
-	room.State.Game().AddPlayer(game_state.NewPlayer(playerId.Value, playerName.Value))
-	defer room.State.Game().RemovePlayer(playerId.Value)
-
-	// sync up new connections
-	switch state := room.State.(type) {
-	case *game_state.Game:
-		players := state.Players()
+		players := state.Game().Players()
 
 		if err := room.WsRoom.WriteAll(func(writer io.Writer) error {
 			return partialPlayers(players).Render(context.Background(), writer)
 		}); err != nil {
-			panic(err)
+			fmt.Println(err)
 		}
-	default:
-		panic("unsupported game state")
+
+		return nil
+	})
+
+	room.WsRoom.Add(ws)
+	defer room.WsRoom.Delete(ws) // 2. remove from ws room
+	defer ws.Close()             // 1. close the ws conn
+
+	err = room.State(func(state game_state.GameState) error {
+		switch state := state.(type) {
+		case *game_state.Game:
+			players := state.Players()
+
+			if err := room.WsRoom.WriteAll(func(writer io.Writer) error {
+				return partialPlayers(players).Render(context.Background(), writer)
+			}); err != nil {
+				fmt.Println(err)
+			}
+
+			return nil
+		default:
+			return fmt.Errorf("unsupported game state, got %T", state)
+		}
+	})
+	if err != nil {
+		panic(err)
 	}
 
 	for {
 		_, _, err := ws.ReadMessage()
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
+			break
 		}
 	}
 }

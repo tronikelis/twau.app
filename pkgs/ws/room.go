@@ -22,7 +22,8 @@ func NewRoom() *Room {
 }
 
 // writes to all conns
-func (self *Room) WriteAll(write func(writer io.Writer) error) error {
+// errors here should probably be just logged and ignored
+func (self *Room) WriteAll(write func(writer io.Writer) error) []error {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
@@ -36,18 +37,19 @@ func (self *Room) WriteAll(write func(writer io.Writer) error) error {
 		}
 	}()
 
-	conns := self.connsUnsafe()
-
+	conns := self.unsafeConns()
 	writers := make([]io.WriteCloser, len(conns))
 
 	for i, v := range conns {
 		writer, err := v.NextWriter(websocket.TextMessage)
 		if err != nil {
-			return err
+			return []error{err}
 		}
 		defer writer.Close()
 		writers[i] = writer
 	}
+
+	var errors []error
 
 	buf := make([]byte, 0, 512)
 	end := false
@@ -58,7 +60,7 @@ func (self *Room) WriteAll(write func(writer io.Writer) error) error {
 		if err != nil {
 			end = true
 			if err != io.EOF {
-				return err
+				return []error{err}
 			}
 		}
 
@@ -71,15 +73,16 @@ func (self *Room) WriteAll(write func(writer io.Writer) error) error {
 		}
 
 		for range writers {
-			// todo: how to handle this error?
-			<-errChan
+			if err := <-errChan; err != nil {
+				errors = append(errors, err)
+			}
 		}
 	}
 
-	return nil
+	return errors
 }
 
-func (self *Room) connsUnsafe() []*websocket.Conn {
+func (self *Room) unsafeConns() []*websocket.Conn {
 	var conns []*websocket.Conn
 
 	for v := self.conns.Front(); v != nil; v = v.Next() {
