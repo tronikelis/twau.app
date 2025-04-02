@@ -2,26 +2,74 @@ package req
 
 import (
 	"context"
+	"sync"
 
 	"word-amongus-game/pkgs/game_state"
 
+	"github.com/gorilla/websocket"
 	"github.com/tronikelis/maruchi"
 )
 
 const (
-	statesKey int = iota
+	ContextKey int = iota
 )
 
-func InitContext(request *maruchi.ReqContextBase, states game_state.States) {
+// methods are concurency safe
+type WsByPlayerId struct {
+	mu           *sync.Mutex
+	wsByPlayerId map[string]*websocket.Conn
+}
+
+// map[key]
+func (self WsByPlayerId) Load(playerId string) (*websocket.Conn, bool) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	ws, ok := self.wsByPlayerId[playerId]
+	return ws, ok
+}
+
+func (self WsByPlayerId) Insert(playerId string, ws *websocket.Conn) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+	self.wsByPlayerId[playerId] = ws
+}
+
+func (self WsByPlayerId) Delete(playerId string) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+	delete(self.wsByPlayerId, playerId)
+}
+
+func NewWsByPlayerId() WsByPlayerId {
+	return WsByPlayerId{
+		mu:           &sync.Mutex{},
+		wsByPlayerId: map[string]*websocket.Conn{},
+	}
+}
+
+type ReqContext struct {
+	States       game_state.States
+	WsByPlayerId WsByPlayerId
+}
+
+func NewReqContext() ReqContext {
+	return ReqContext{
+		States:       game_state.NewStates(),
+		WsByPlayerId: NewWsByPlayerId(),
+	}
+}
+
+func InitContext(request *maruchi.ReqContextBase, reqContext ReqContext) {
 	newContext := context.WithValue(
 		request.Context(),
-		statesKey,
-		states,
+		ContextKey,
+		reqContext,
 	)
 
 	request.R = request.R.WithContext(newContext)
 }
 
-func GetStates(ctx maruchi.ReqContext) game_state.States {
-	return ctx.Context().Value(statesKey).(game_state.States)
+func GetReqContext(ctx maruchi.ReqContext) ReqContext {
+	return ctx.Context().Value(ContextKey).(ReqContext)
 }

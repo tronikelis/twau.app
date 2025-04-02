@@ -23,17 +23,14 @@ func postIndex(ctx maruchi.ReqContext) {
 		panic(err)
 	}
 
-	req.GetStates(ctx).Game(gameId, func(game *game_state.Game) {
+	req.GetReqContext(ctx).States.Game(gameId, func(game *game_state.Game) {
 		game.AddPlayer(game_state.NewPlayer(playerId, playerName))
 	})
 
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", gameId))
 
-	http.SetCookie(ctx.Writer(), &http.Cookie{
-		Name:     "player_id",
-		Value:    playerId,
-		SameSite: http.SameSiteLaxMode,
-		HttpOnly: false,
-		MaxAge:   1 << 31,
-	})
+	playerIdCookie := req.CookiePlayerId
+	playerIdCookie.Value = playerId
+
+	http.SetCookie(ctx.Writer(), &playerIdCookie)
 }
