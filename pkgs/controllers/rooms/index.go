@@ -11,6 +11,8 @@ import (
 )
 
 func postIndex(ctx maruchi.ReqContext) {
+	reqContext := req.GetReqContext(ctx)
+
 	playerName := ctx.Req().PostFormValue("player_name")
 
 	playerId, err := game_state.RandomHex()
@@ -18,19 +20,31 @@ func postIndex(ctx maruchi.ReqContext) {
 		panic(err)
 	}
 
-	gameId, err := game_state.RandomHex()
+	roomId, err := game_state.RandomHex()
 	if err != nil {
 		panic(err)
 	}
 
-	req.GetReqContext(ctx).States.Game(gameId, func(game *game_state.Game) {
-		game.AddPlayer(game_state.NewPlayer(playerId, playerName))
-	})
+	state, ok := reqContext.Rooms.CreateRoom(roomId)
+	if !ok {
+		panic("room already exists")
+	}
 
-	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", gameId))
+	game, ok := state.State.(*game_state.Game)
+	if !ok {
+		panic("expected Game, got %T")
+	}
+
+	game.AddPlayer(game_state.NewPlayer(playerId, playerName))
+
+	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))
 
 	playerIdCookie := req.CookiePlayerId
 	playerIdCookie.Value = playerId
 
+	playerNameCookie := req.CookiePlayerName
+	playerNameCookie.Value = playerName
+
 	http.SetCookie(ctx.Writer(), &playerIdCookie)
+	http.SetCookie(ctx.Writer(), &playerNameCookie)
 }

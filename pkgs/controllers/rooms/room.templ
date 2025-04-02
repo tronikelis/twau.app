@@ -1,0 +1,29 @@
+package rooms
+
+import (
+	"fmt"
+	"word-amongus-game/pkgs/game_state"
+	"word-amongus-game/pkgs/ui"
+)
+
+templ pageRoomId(roomId string) {
+	@ui.Page() {
+		<div
+			hx-ext="ws"
+			ws-connect={ ui.StringURL(fmt.Sprintf("/rooms/%s/ws", roomId)) }
+		>
+			@partialPlayers(nil)
+		</div>
+	}
+}
+
+templ partialPlayers(players []game_state.Player) {
+	<div id="players" hx-swap-oob="outerHTML">
+		for _, v := range players {
+			<div>
+				<p>{ v.Name }</p>
+				<p>{ v.Id }</p>
+			</div>
+		}
+	</div>
+}
