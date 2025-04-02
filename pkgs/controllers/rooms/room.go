@@ -73,7 +73,6 @@ func wsRoomId(ctx maruchi.ReqContext) {
 	})
 	defer room.State(func(state game_state.GameState) error { // 3. sync changes to others
 		state.Game().RemovePlayer(playerId.Value)
-
 		players := state.Game().Players()
 
 		if err := room.WsRoom.WriteAll(func(writer io.Writer) error {
@@ -90,20 +89,15 @@ func wsRoomId(ctx maruchi.ReqContext) {
 	defer ws.Close()             // 1. close the ws conn
 
 	err = room.State(func(state game_state.GameState) error {
-		switch state := state.(type) {
-		case *game_state.Game:
-			players := state.Players()
+		players := state.Game().Players()
 
-			if err := room.WsRoom.WriteAll(func(writer io.Writer) error {
-				return partialPlayers(players).Render(context.Background(), writer)
-			}); err != nil {
-				fmt.Println(err)
-			}
-
-			return nil
-		default:
-			return fmt.Errorf("unsupported game state, got %T", state)
+		if err := room.WsRoom.WriteAll(func(writer io.Writer) error {
+			return partialPlayers(players).Render(context.Background(), writer)
+		}); err != nil {
+			fmt.Println(err)
 		}
+
+		return nil
 	})
 	if err != nil {
 		panic(err)

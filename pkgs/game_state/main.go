@@ -1,8 +1,8 @@
 package game_state
 
 import (
-	"container/ring"
 	"math/rand/v2"
+	"slices"
 )
 
 type GameState interface {
@@ -16,10 +16,6 @@ type Player struct {
 
 func NewPlayer(id string, name string) Player {
 	return Player{Id: id, Name: name}
-}
-
-func NewGame() *Game {
-	return &Game{}
 }
 
 type PlayerSynonym struct {
@@ -37,31 +33,13 @@ func newPlayerSynonym(synonym string, player Player) PlayerSynonym {
 type Game struct {
 	word     string
 	synonyms []PlayerSynonym
-	players  *ring.Ring
+	players  []Player
 	// ඞ
 	imposter Player
 }
 
-// return false to stop iteration
-func (self *Game) eachPlayer(do func(player *ring.Ring) bool) {
-	if self.players == nil {
-		return
-	}
-
-	if self.players.Len() == 1 {
-		do(self.players)
-		return
-	}
-
-	curr := self.players
-	// we have a do while at home honey
-	for ok := true; ok; ok = curr != self.players {
-		if !do(curr) {
-			return
-		}
-
-		curr = curr.Next()
-	}
+func NewGame() *Game {
+	return &Game{}
 }
 
 func (self *Game) RemovePlayer(id string) {
@@ -69,48 +47,19 @@ func (self *Game) RemovePlayer(id string) {
 		return
 	}
 
-	// special case, 1 element v.Next() == itself
-	if self.players.Len() == 1 {
-		self.players = nil
-		return
-	}
-
-	self.eachPlayer(func(player *ring.Ring) bool {
-		if player.Value.(Player).Id == id {
-			self.players.Prev().Unlink(1)
-			return false
-		}
-
-		return true
+	self.players = slices.DeleteFunc(self.players, func(player Player) bool {
+		return player.Id == id
 	})
 }
 
 func (self *Game) HasPlayer(id string) bool {
-	has := false
-	self.eachPlayer(func(player *ring.Ring) bool {
-		if player.Value.(Player).Id == id {
-			has = true
-			return false
-		}
-
-		return true
+	return slices.ContainsFunc(self.players, func(player Player) bool {
+		return player.Id == id
 	})
-
-	return has
 }
 
 func (self *Game) Players() []Player {
-	if self.players == nil {
-		return nil
-	}
-
-	var players []Player
-
-	self.players.Do(func(a any) {
-		players = append(players, a.(Player))
-	})
-
-	return players
+	return self.players
 }
 
 func (self *Game) Game() *Game {
@@ -125,15 +74,7 @@ func (self *Game) Reset() {
 
 func (self *Game) Start(word string) {
 	self.word = word
-
-	imposterIndex := rand.Uint32N(uint32(self.players.Len()))
-	imposter := self.players
-
-	for range imposterIndex {
-		imposter = imposter.Next()
-	}
-
-	self.imposter = imposter.Value.(Player)
+	self.imposter = self.players[rand.IntN(len(self.players))]
 }
 
 // idempotent
@@ -142,48 +83,40 @@ func (self *Game) AddPlayer(player Player) {
 		return
 	}
 
-	r := ring.New(1)
-	r.Value = player
-
-	if self.players == nil {
-		self.players = r
-		return
-	}
-
-	self.players.Link(r)
+	self.players = append(self.players, player)
 }
 
 func (self *Game) PlayerTurn() *PlayerTurn {
-	return newPlayerTurn(self, self.players)
+	return newPlayerTurn(self)
 }
 
 type VoteTurn struct {
 	game *Game
 
-	picks      map[Player]Player
-	initPlayer *ring.Ring
-	player     *ring.Ring
+	picks           map[Player]Player
+	playerIndex     int
+	initPlayerIndex int
+}
+
+func newVoteTurn(game *Game, playerIndex int) *VoteTurn {
+	return &VoteTurn{
+		game:            game,
+		picks:           map[Player]Player{},
+		playerIndex:     playerIndex,
+		initPlayerIndex: playerIndex,
+	}
 }
 
 func (self *VoteTurn) Game() *Game {
 	return self.game
 }
 
-func newVoteTurn(game *Game, player *ring.Ring) *VoteTurn {
-	return &VoteTurn{
-		game:       game,
-		picks:      map[Player]Player{},
-		player:     player,
-		initPlayer: player,
-	}
-}
-
 // returns false if voting has ended
 func (self *VoteTurn) Vote(player Player) bool {
-	self.picks[self.player.Value.(Player)] = player
-	self.player = self.player.Next()
+	self.picks[self.game.players[self.playerIndex]] = player
+	self.playerIndex = self.playerIndex + 1%len(self.game.players)
 
-	if self.player == self.initPlayer {
+	if self.playerIndex == self.initPlayerIndex {
 		return false
 	}
 
@@ -191,31 +124,30 @@ func (self *VoteTurn) Vote(player Player) bool {
 }
 
 type PlayerTurn struct {
-	game   *Game
-	player *ring.Ring
+	game        *Game
+	playerIndex int
+}
+
+func newPlayerTurn(game *Game) *PlayerTurn {
+	return &PlayerTurn{
+		game: game,
+	}
 }
 
 func (self *PlayerTurn) Game() *Game {
 	return self.game
 }
 
-func newPlayerTurn(game *Game, player *ring.Ring) *PlayerTurn {
-	return &PlayerTurn{
-		game:   game,
-		player: player,
-	}
-}
-
 func (self *PlayerTurn) InitVote() *VoteTurn {
-	return newVoteTurn(self.game, self.player)
+	return newVoteTurn(self.game, self.playerIndex)
 }
 
 // records player synonym and passes turn to next
 func (self *PlayerTurn) SaySynonym(synonym string) {
 	self.game.synonyms = append(
 		self.game.synonyms,
-		newPlayerSynonym(synonym, self.player.Value.(Player)),
+		newPlayerSynonym(synonym, self.game.players[self.playerIndex]),
 	)
 
-	self.player = self.player.Next()
+	self.playerIndex = self.playerIndex + 1%len(self.game.players)
 }
