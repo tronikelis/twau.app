@@ -81,9 +81,9 @@ func (self Rooms) CreateRoom(roomId string) (*Room, bool) {
 	return room, true
 }
 
-func (self Rooms) DeleteRoom(gameId string) {
+func (self Rooms) DeleteRoom(roomId string) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	delete(self.statesById, gameId)
+	delete(self.statesById, roomId)
 }

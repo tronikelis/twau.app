@@ -75,6 +75,11 @@ func wsRoomId(ctx maruchi.ReqContext) {
 		state.Game().RemovePlayer(playerId.Value)
 		players := state.Game().Players()
 
+		if len(players) == 0 {
+			reqContext.Rooms.DeleteRoom(roomId)
+			return nil
+		}
+
 		if err := room.WsRoom.WriteAll(func(writer io.Writer) error {
 			return partialPlayers(players).Render(context.Background(), writer)
 		}); err != nil {
