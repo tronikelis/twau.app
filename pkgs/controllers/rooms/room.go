@@ -80,8 +80,8 @@ func wsRoomId(ctx maruchi.ReqContext) {
 			return nil
 		}
 
-		if err := room.WsRoom.WriteAll(func(writer io.Writer) error {
-			return partialPlayers(players).Render(context.Background(), writer)
+		if err := room.WsRoom.WriteEach(func(writer io.Writer, data any) error {
+			return partialPlayers(players, data.(string)).Render(context.Background(), writer)
 		}); err != nil {
 			fmt.Println(err)
 		}
@@ -89,15 +89,15 @@ func wsRoomId(ctx maruchi.ReqContext) {
 		return nil
 	})
 
-	room.WsRoom.Add(ws)
+	room.WsRoom.Add(ws, playerId.Value)
 	defer room.WsRoom.Delete(ws) // 2. remove from ws room
 	defer ws.Close()             // 1. close the ws conn
 
 	err = room.State(func(state game_state.GameState) error {
 		players := state.Game().Players()
 
-		if err := room.WsRoom.WriteAll(func(writer io.Writer) error {
-			return partialPlayers(players).Render(context.Background(), writer)
+		if err := room.WsRoom.WriteEach(func(writer io.Writer, data any) error {
+			return partialPlayers(players, data.(string)).Render(context.Background(), writer)
 		}); err != nil {
 			fmt.Println(err)
 		}

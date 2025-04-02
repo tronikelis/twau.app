@@ -11,17 +11,56 @@ import (
 // concurrency safe
 type Room struct {
 	conns *list.List
-	mu    *sync.Mutex
+	// extra info for websocket conn
+	data map[*websocket.Conn]any // idk maybe extract into generic for type safety, but more complicated
+	mu   *sync.Mutex
 }
 
 func NewRoom() *Room {
 	return &Room{
 		mu:    &sync.Mutex{},
 		conns: list.New(),
+		data:  map[*websocket.Conn]any{},
 	}
 }
 
-// writes to all conns
+// calls `write` concurrently for each conn with its data,
+// errors here should probably be just logged and ignored
+func (self *Room) WriteEach(write func(writer io.Writer, data any) error) []error {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	conns := self.unsafeConns()
+	writers := make([]io.WriteCloser, len(conns))
+
+	for i, v := range conns {
+		writer, err := v.NextWriter(websocket.TextMessage)
+		if err != nil {
+			return []error{err}
+		}
+		defer writer.Close()
+		writers[i] = writer
+	}
+
+	errChan := make(chan error)
+	for i, v := range writers {
+		go func() {
+			// todo: this can take a long time, use a timeout probs
+			errChan <- write(v, self.data[conns[i]])
+		}()
+	}
+
+	var errors []error
+	for range writers {
+		if err := <-errChan; err != nil {
+			errors = append(errors, err)
+		}
+	}
+
+	return errors
+}
+
+// writes to all conns,
 // errors here should probably be just logged and ignored
 func (self *Room) WriteAll(write func(writer io.Writer) error) []error {
 	self.mu.Lock()
@@ -67,6 +106,7 @@ func (self *Room) WriteAll(write func(writer io.Writer) error) []error {
 		errChan := make(chan error)
 		for _, v := range writers {
 			go func() {
+				// todo: this can take a long time, use a timeout probs
 				_, err := v.Write(buf)
 				errChan <- err
 			}()
@@ -82,20 +122,26 @@ func (self *Room) WriteAll(write func(writer io.Writer) error) []error {
 	return errors
 }
 
+// WARNING: does not have mutex, used to call inside a mutex
 func (self *Room) unsafeConns() []*websocket.Conn {
-	var conns []*websocket.Conn
+	conns := make([]*websocket.Conn, self.conns.Len())
 
+	i := 0
 	for v := self.conns.Front(); v != nil; v = v.Next() {
-		conns = append(conns, v.Value.(*websocket.Conn))
+		conns[i] = v.Value.(*websocket.Conn)
+		i++
 	}
 
 	return conns
 }
 
-func (self *Room) Add(conn *websocket.Conn) {
+// data is optional
+func (self *Room) Add(conn *websocket.Conn, data any) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
+
 	self.conns.PushBack(conn)
+	self.data[conn] = data
 }
 
 func (self *Room) Delete(conn *websocket.Conn) {
@@ -108,4 +154,6 @@ func (self *Room) Delete(conn *websocket.Conn) {
 			break
 		}
 	}
+
+	delete(self.data, conn)
 }
