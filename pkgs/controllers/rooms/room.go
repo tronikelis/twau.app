@@ -75,10 +75,11 @@ func wsRoomId(ctx maruchi.ReqContext) {
 		state.Game().RemovePlayer(playerId.Value)
 		players := state.Game().Players()
 
-		if len(players) == 0 {
-			reqContext.Rooms.DeleteRoom(roomId)
-			return nil
-		}
+		// todo: this deletes the room if 1 user refreshes, not really good experience
+		// if len(players) == 0 {
+		// 	reqContext.Rooms.DeleteRoom(roomId)
+		// 	return nil
+		// }
 
 		if err := room.WsRoom.WriteEach(func(writer io.Writer, data any) error {
 			return partialPlayers(players, data.(string)).Render(context.Background(), writer)
