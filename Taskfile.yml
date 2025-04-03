@@ -7,14 +7,14 @@ tasks:
 
   dev:
     deps:
-      # - task: build/tailwind
-      #   vars:
-      #     ARGS: "--watch"
+      - task: build/tailwind
+        vars:
+          ARGS: "--watch"
       - task: dev/templ
       - task: dev/server
 
-  # build/tailwind:
-  #   cmd: npx -y @tailwindcss/cli -i ./main.css -o ./static/css/tw.css --minify {{.ARGS}} {{.CLI_ARGS}}
+  build/tailwind:
+    cmd: npx -y @tailwindcss/cli -i ./main.css -o ./static/css/tw.css --minify {{.ARGS}} {{.CLI_ARGS}}
 
   dev/templ:
     cmd: templ generate --watch -v

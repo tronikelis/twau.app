@@ -72,8 +72,9 @@ func wsRoomId(ctx maruchi.ReqContext) {
 		return nil
 	})
 	defer room.State(func(state game_state.GameState) error { // 3. sync changes to others
-		state.Game().RemovePlayer(playerId.Value)
-		players := state.Game().Players()
+		if game, ok := state.(*game_state.Game); ok {
+			game.RemovePlayer(playerId.Value)
+		}
 
 		// todo: this deletes the room if 1 user refreshes, not really good experience
 		// if len(players) == 0 {
@@ -82,7 +83,7 @@ func wsRoomId(ctx maruchi.ReqContext) {
 		// }
 
 		if err := room.WsRoom.WriteEach(func(writer io.Writer, data any) error {
-			return partialPlayers(players, data.(string)).Render(context.Background(), writer)
+			return partialGameState(state, data.(string)).Render(context.Background(), writer)
 		}); err != nil {
 			fmt.Println(err)
 		}
@@ -95,10 +96,8 @@ func wsRoomId(ctx maruchi.ReqContext) {
 	defer ws.Close()             // 1. close the ws conn
 
 	err = room.State(func(state game_state.GameState) error {
-		players := state.Game().Players()
-
 		if err := room.WsRoom.WriteEach(func(writer io.Writer, data any) error {
-			return partialPlayers(players, data.(string)).Render(context.Background(), writer)
+			return partialGameState(state, data.(string)).Render(context.Background(), writer)
 		}); err != nil {
 			fmt.Println(err)
 		}

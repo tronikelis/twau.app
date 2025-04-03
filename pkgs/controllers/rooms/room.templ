@@ -9,26 +9,63 @@ import (
 templ pageRoomId(roomId string) {
 	@ui.Page() {
 		<div
+			class="w-full p-12"
 			hx-ext="ws"
 			ws-connect={ ui.StringURL(fmt.Sprintf("/rooms/%s/ws", roomId)) }
 		>
-			@partialPlayers(nil, "")
+			@partialGameState(nil, "")
 		</div>
 	}
 }
 
-templ partialPlayers(players []game_state.Player, playerId string) {
-	<div id="players" hx-swap-oob="outerHTML">
-		for _, v := range players {
-			<div>
-				<p>
-					{ v.Name }
-					if v.Id == playerId {
-						YOU!!!
+templ partialGameState(state game_state.GameState, selfPlayerId string) {
+	<div id="game_state" class="grid grid-cols-12 gap-16" hx-swap-oob="outerHTML">
+		<div class="col-span-3">
+			@partialPlayers(state, selfPlayerId)
+		</div>
+	</div>
+}
+
+templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
+	<div id="player_action" hx-swap-oob="outerHTML">
+		switch state := state.(type) {
+			case *game_state.Game:
+				<button type="button" ws-send hx-vals={ `{"` }>Start game</button>
+		}
+	</div>
+}
+
+templ playerCard(player game_state.Player, selfPlayerId string) {
+	<div class="p-2 shadow-xl rounded-2xl border border-gray-600">
+		<p class={ templ.KV("font-bold italic", selfPlayerId == player.Id) }>
+			{ children... }
+		</p>
+	</div>
+}
+
+templ partialPlayers(state game_state.GameState, selfPlayerId string) {
+	<div
+		class="flex flex-col gap-4"
+		id="players"
+		hx-swap-oob="outerHTML"
+	>
+		<h2 class="text-4xl">Players</h2>
+		switch state := state.(type) {
+			case *game_state.Game:
+				for _, v := range state.Players() {
+					@playerCard(v, selfPlayerId) {
+						{ v.Name }
 					}
-				</p>
-				<p>{ v.Id }</p>
-			</div>
+				}
+			case *game_state.PlayerTurn:
+				for i, v := range state.Game().Players() {
+					@playerCard(v, selfPlayerId) {
+						{ v.Name }
+						if state.PlayerIndex() == i {
+							<span>HIS TURN</span>
+						}
+					}
+				}
 		}
 	</div>
 }

@@ -123,6 +123,10 @@ func (self *VoteTurn) Vote(player Player) bool {
 	return true
 }
 
+func (self *VoteTurn) Picks() map[Player]Player {
+	return self.picks
+}
+
 type PlayerTurn struct {
 	game        *Game
 	playerIndex int
@@ -140,6 +144,10 @@ func (self *PlayerTurn) Game() *Game {
 
 func (self *PlayerTurn) InitVote() *VoteTurn {
 	return newVoteTurn(self.game, self.playerIndex)
+}
+
+func (self *PlayerTurn) PlayerIndex() int {
+	return self.playerIndex
 }
 
 // records player synonym and passes turn to next
