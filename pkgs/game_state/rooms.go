@@ -7,29 +7,33 @@ import (
 )
 
 type Room struct {
-	WsRoom      *ws.Room
-	UnsafeState GameState
+	wsRoom      *ws.Room
+	unsafeState GameState
 	mu          *sync.Mutex
 }
 
 func NewRoom() *Room {
 	return &Room{
-		WsRoom:      ws.NewRoom(),
-		UnsafeState: NewGame(),
+		wsRoom:      ws.NewRoom(),
+		unsafeState: NewGame(),
 		mu:          &sync.Mutex{},
 	}
+}
+
+func (self *Room) WsRoom() *ws.Room {
+	return self.wsRoom
 }
 
 func (self *Room) StateRef(mutate func(state *GameState) error) error {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	return mutate(&self.UnsafeState)
+	return mutate(&self.unsafeState)
 }
 
 func (self *Room) State(mutate func(state GameState) error) error {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	return mutate(self.UnsafeState)
+	return mutate(self.unsafeState)
 }
 
 // concurrency safe

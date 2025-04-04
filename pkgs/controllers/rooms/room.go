@@ -2,12 +2,14 @@ package rooms
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 
 	"word-amongus-game/pkgs/game_state"
 	"word-amongus-game/pkgs/server/req"
+	"word-amongus-game/pkgs/ws"
 
 	"github.com/gorilla/websocket"
 	"github.com/tronikelis/maruchi"
@@ -72,6 +74,7 @@ func wsRoomId(ctx maruchi.ReqContext) {
 		return nil
 	})
 	defer room.State(func(state game_state.GameState) error { // 3. sync changes to others
+		// this does not remove a player if it is not the start of the game
 		if game, ok := state.(*game_state.Game); ok {
 			game.RemovePlayer(playerId.Value)
 		}
@@ -82,37 +85,70 @@ func wsRoomId(ctx maruchi.ReqContext) {
 		// 	return nil
 		// }
 
-		if err := room.WsRoom.WriteEach(func(writer io.Writer, data any) error {
-			return partialGameState(state, data.(string)).Render(context.Background(), writer)
-		}); err != nil {
+		if err := unsafeSyncGame(state, room.WsRoom()); err != nil {
 			fmt.Println(err)
 		}
 
 		return nil
 	})
 
-	room.WsRoom.Add(ws, playerId.Value)
-	defer room.WsRoom.Delete(ws) // 2. remove from ws room
-	defer ws.Close()             // 1. close the ws conn
+	room.WsRoom().Add(ws, playerId.Value)
+	defer room.WsRoom().Delete(ws) // 2. remove from ws room
+	defer ws.Close()               // 1. close the ws conn
 
-	err = room.State(func(state game_state.GameState) error {
-		if err := room.WsRoom.WriteEach(func(writer io.Writer, data any) error {
-			return partialGameState(state, data.(string)).Render(context.Background(), writer)
-		}); err != nil {
-			fmt.Println(err)
-		}
-
-		return nil
-	})
-	if err != nil {
+	if err := syncGame(room); err != nil {
 		panic(err)
 	}
 
+	// the main game loop, events are as follows:
+	// 1. read an action from a client
+	// 2. change game state according to the action
+	// 3. sync updated game state to all clients
 	for {
-		_, _, err := ws.ReadMessage()
+		_, bytes, err := ws.ReadMessage()
 		if err != nil {
 			fmt.Println(err)
 			break
 		}
+
+		var action game_state.Action
+		if err := json.Unmarshal(bytes, &action); err != nil {
+			panic(err)
+		}
+
+		switch action.Action {
+		case game_state.ACTION_START_GAME:
+			if err := room.StateRef(func(state *game_state.GameState) error {
+				game := (*state).(*game_state.Game)
+				*state = game.Start()
+				return nil
+			}); err != nil {
+				panic(err)
+			}
+
+		default:
+			panic("unsupported action")
+		}
+
+		if err := syncGame(room); err != nil {
+			panic(err)
+		}
 	}
+}
+
+func unsafeSyncGame(state game_state.GameState, to *ws.Room) []error {
+	return to.WriteEach(func(writer io.Writer, data any) error {
+		return partialGameState(state, data.(string)).Render(context.Background(), writer)
+	})
+}
+
+func syncGame(room *game_state.Room) error {
+	return room.State(func(state game_state.GameState) error {
+		if err := unsafeSyncGame(state, room.WsRoom()); err != nil {
+			// todo:
+			fmt.Println(err)
+		}
+
+		return nil
+	})
 }

@@ -9,6 +9,11 @@ type GameState interface {
 	Game() *Game
 }
 
+type PlayerIndex interface {
+	GameState
+	PlayerIndex() int
+}
+
 type Player struct {
 	Id   string
 	Name string
@@ -19,27 +24,32 @@ func NewPlayer(id string, name string) Player {
 }
 
 type PlayerSynonym struct {
-	synonym string
-	player  Player
+	Synonym string
+	Player  Player
 }
 
 func newPlayerSynonym(synonym string, player Player) PlayerSynonym {
 	return PlayerSynonym{
-		synonym: synonym,
-		player:  player,
+		Synonym: synonym,
+		Player:  player,
 	}
 }
 
 type Game struct {
-	word     string
-	synonyms []PlayerSynonym
-	players  []Player
+	word                  string
+	synonyms              []PlayerSynonym
+	players               []Player
+	prevChosenPlayerIndex int
 	// ඞ
 	imposter Player
 }
 
 func NewGame() *Game {
 	return &Game{}
+}
+
+func (self *Game) Synonyms() []PlayerSynonym {
+	return self.synonyms
 }
 
 func (self *Game) RemovePlayer(id string) {
@@ -70,11 +80,12 @@ func (self *Game) Reset() {
 	self.word = ""
 	self.synonyms = nil
 	self.imposter = Player{}
+	self.prevChosenPlayerIndex = 0
 }
 
-func (self *Game) Start(word string) {
-	self.word = word
+func (self *Game) Start() *PlayerChooseWord {
 	self.imposter = self.players[rand.IntN(len(self.players))]
+	return NewPlayerChooseWord(self)
 }
 
 // idempotent
@@ -158,4 +169,39 @@ func (self *PlayerTurn) SaySynonym(synonym string) {
 	)
 
 	self.playerIndex = self.playerIndex + 1%len(self.game.players)
+}
+
+type PlayerChooseWord struct {
+	game        *Game
+	playerIndex int
+	fromWords   []string
+}
+
+func NewPlayerChooseWord(game *Game) *PlayerChooseWord {
+	return &PlayerChooseWord{
+		game:        game,
+		fromWords:   allWords.RandomN(4),
+		playerIndex: game.prevChosenPlayerIndex + 1%len(game.players),
+	}
+}
+
+func (self *PlayerChooseWord) Game() *Game {
+	return self.game
+}
+
+func (self *PlayerChooseWord) FromWords() []string {
+	return self.fromWords
+}
+
+func (self *PlayerChooseWord) PlayerIndex() int {
+	return self.playerIndex
+}
+
+func (self *PlayerChooseWord) Choose(index int) *PlayerTurn {
+	if index < 0 || index >= len(self.fromWords) {
+		index = 0
+	}
+
+	self.game.word = self.fromWords[index]
+	return self.game.PlayerTurn()
 }

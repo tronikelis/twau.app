@@ -1,2 +1,13 @@
 @import "tailwindcss";
 @config "./tailwind.config.cjs";
+
+button {
+  @apply border-black border p-1 rounded-none bg-gray-200;
+  @variant hover {
+    @apply bg-gray-400 cursor-pointer;
+  }
+}
+
+input {
+  @apply border-black border p-1 rounded-none bg-transparent;
+}

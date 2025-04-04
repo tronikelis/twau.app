@@ -8,12 +8,15 @@ import (
 
 templ pageRoomId(roomId string) {
 	@ui.Page() {
-		<div
-			class="w-full p-12"
-			hx-ext="ws"
-			ws-connect={ ui.StringURL(fmt.Sprintf("/rooms/%s/ws", roomId)) }
-		>
-			@partialGameState(nil, "")
+		<div class="flex flex-col gap-0">
+			<h1 class="text-5xl text-center">ඞ SUSSY AMONGUS MONGUS WORD GAME ඞ</h1>
+			<div
+				class="w-full p-12"
+				hx-ext="ws"
+				ws-connect={ ui.StringURL(fmt.Sprintf("/rooms/%s/ws", roomId)) }
+			>
+				@partialGameState(nil, "")
+			</div>
 		</div>
 	}
 }
@@ -23,29 +26,72 @@ templ partialGameState(state game_state.GameState, selfPlayerId string) {
 		<div class="col-span-3">
 			@partialPlayers(state, selfPlayerId)
 		</div>
+		<div class="col-span-6">
+			@partialPlayerAction(state, selfPlayerId)
+		</div>
+		<div class="col-span-3">
+			@partialGameSynonyms(state)
+		</div>
+	</div>
+}
+
+templ partialGameSynonyms(state game_state.GameState) {
+	<div id="game_synonyms" class="flex flex-col gap-6">
+		<h2 class="text-4xl">Synonyms</h2>
+		<div class="flex flex-col gap-1">
+			if state != nil {
+				for _, v := range state.Game().Synonyms() {
+					<p>{ v.Player.Name } -> { v.Synonym }</p>
+				}
+			}
+		</div>
 	</div>
 }
 
 templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
-	<div id="player_action" hx-swap-oob="outerHTML">
-		switch state := state.(type) {
+	<div id="player_action" hx-swap-oob="outerHTML" class="flex flex-col gap-6">
+		<h2 class="text-4xl">
+			State:
+			<span class="italic">
+				switch state.(type) {
+					case *game_state.Game:
+						game
+					case *game_state.PlayerChooseWord:
+						player_choose_word
+				}
+			</span>
+		</h2>
+		switch state.(type) {
 			case *game_state.Game:
-				<button type="button" ws-send hx-vals={ `{"` }>Start game</button>
+				<button
+					type="button"
+					ws-send
+					hx-vals={ `{
+						"action": "start_game"
+					}` }
+				>
+					Start game
+				</button>
 		}
 	</div>
 }
 
-templ playerCard(player game_state.Player, selfPlayerId string) {
+templ playerCard(player game_state.Player, turn bool, selfPlayerId string) {
 	<div class="p-2 shadow-xl rounded-2xl border border-gray-600">
-		<p class={ templ.KV("font-bold italic", selfPlayerId == player.Id) }>
-			{ children... }
+		<p>
+			if turn {
+				HIS TURN ->{ " " }
+			}
+			<span class={ templ.KV("font-bold text-blue-600", player.Id == selfPlayerId) }>
+				{ children... }
+			</span>
 		</p>
 	</div>
 }
 
 templ partialPlayers(state game_state.GameState, selfPlayerId string) {
 	<div
-		class="flex flex-col gap-4"
+		class="flex flex-col gap-6"
 		id="players"
 		hx-swap-oob="outerHTML"
 	>
@@ -53,17 +99,14 @@ templ partialPlayers(state game_state.GameState, selfPlayerId string) {
 		switch state := state.(type) {
 			case *game_state.Game:
 				for _, v := range state.Players() {
-					@playerCard(v, selfPlayerId) {
+					@playerCard(v, false, selfPlayerId) {
 						{ v.Name }
 					}
 				}
-			case *game_state.PlayerTurn:
+			case game_state.PlayerIndex:
 				for i, v := range state.Game().Players() {
-					@playerCard(v, selfPlayerId) {
+					@playerCard(v, state.PlayerIndex() == i, selfPlayerId) {
 						{ v.Name }
-						if state.PlayerIndex() == i {
-							<span>HIS TURN</span>
-						}
 					}
 				}
 		}
