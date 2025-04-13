@@ -129,7 +129,7 @@ func (self *VoteTurn) Game() *Game {
 // returns false if voting has ended
 func (self *VoteTurn) Vote(player Player) bool {
 	self.picks[self.game.players[self.playerIndex]] = player
-	self.playerIndex = self.playerIndex + 1%len(self.game.players)
+	self.playerIndex = (self.playerIndex + 1) % len(self.game.players)
 
 	if self.playerIndex == self.initPlayerIndex {
 		return false
@@ -172,7 +172,7 @@ func (self *PlayerTurn) SaySynonym(synonym string) {
 		newPlayerSynonym(synonym, self.game.players[self.playerIndex]),
 	)
 
-	self.playerIndex = self.playerIndex + 1%len(self.game.players)
+	self.playerIndex = (self.playerIndex + 1) % len(self.game.players)
 }
 
 type PlayerChooseWord struct {
@@ -185,7 +185,7 @@ func NewPlayerChooseWord(game *Game) *PlayerChooseWord {
 	return &PlayerChooseWord{
 		game:        game,
 		fromWords:   allWords.RandomN(4),
-		playerIndex: game.prevChosenPlayerIndex + 1%len(game.players),
+		playerIndex: (game.prevChosenPlayerIndex + 1) % len(game.players),
 	}
 }
 
