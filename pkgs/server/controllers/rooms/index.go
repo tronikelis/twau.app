@@ -6,28 +6,24 @@ import (
 
 	"word-amongus-game/pkgs/game_state"
 	"word-amongus-game/pkgs/server/req"
-
-	"github.com/tronikelis/maruchi"
 )
 
-func postIndex(ctx maruchi.ReqContext) {
-	reqContext := req.GetReqContext(ctx)
-
+func postIndex(ctx req.ReqContext) error {
 	playerName := ctx.Req().PostFormValue("player_name")
 
 	playerId, err := game_state.RandomHex()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	roomId, err := game_state.RandomHex()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	state, ok := reqContext.Rooms.CreateRoom(roomId)
+	state, ok := ctx.Rooms.CreateRoom(roomId)
 	if !ok {
-		panic("room already exists")
+		return req.ErrRoomExists
 	}
 
 	err = state.State(func(state game_state.GameState) error {
@@ -41,7 +37,7 @@ func postIndex(ctx maruchi.ReqContext) {
 		return nil
 	})
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))
@@ -54,4 +50,6 @@ func postIndex(ctx maruchi.ReqContext) {
 
 	http.SetCookie(ctx.Writer(), &playerIdCookie)
 	http.SetCookie(ctx.Writer(), &playerNameCookie)
+
+	return nil
 }

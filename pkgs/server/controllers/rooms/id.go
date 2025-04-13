@@ -12,31 +12,28 @@ import (
 	"word-amongus-game/pkgs/ws"
 
 	"github.com/gorilla/websocket"
-	"github.com/tronikelis/maruchi"
 )
 
-func postId(ctx maruchi.ReqContext) {
-	reqContext := req.GetReqContext(ctx)
-
+func postId(ctx req.ReqContext) error {
 	roomId := ctx.Req().PathValue("id")
 
 	playerName := ctx.Req().PostFormValue("player_name")
 
 	playerId, err := game_state.RandomHex()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	room, ok := reqContext.Rooms.Room(roomId)
+	room, ok := ctx.Rooms.Room(roomId)
 	if !ok {
-		panic("room does not exist")
+		return req.ErrRoomDoesNotExist
 	}
 
 	if err := room.State(func(state game_state.GameState) error {
 		state.Game().AddPlayer(game_state.NewPlayer(playerId, playerName))
 		return nil
 	}); err != nil {
-		panic(err)
+		return err
 	}
 
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))
@@ -49,68 +46,64 @@ func postId(ctx maruchi.ReqContext) {
 
 	http.SetCookie(ctx.Writer(), &playerIdCookie)
 	http.SetCookie(ctx.Writer(), &playerNameCookie)
+
+	return nil
 }
 
-func getId(ctx maruchi.ReqContext) {
-	reqContext := req.GetReqContext(ctx)
-
+func getId(ctx req.ReqContext) error {
 	roomId := ctx.Req().PathValue("id")
 
-	if !reqContext.Rooms.HasRoom(roomId) {
-		ctx.Writer().WriteHeader(http.StatusNotFound)
-		return
+	if !ctx.Rooms.HasRoom(roomId) {
+		return req.ErrRoomDoesNotExist
 	}
 
 	_, err := ctx.Req().Cookie(req.CookiePlayerName.Name)
 	if err != nil {
-		pagePlayerCreate(roomId).Render(ctx.Context(), ctx.Writer())
-		return
+		return pagePlayerCreate(roomId).Render(ctx.Context(), ctx.Writer())
 	}
 	_, err = ctx.Req().Cookie(req.CookiePlayerId.Name)
 	if err != nil {
-		pagePlayerCreate(roomId).Render(ctx.Context(), ctx.Writer())
-		return
+		return pagePlayerCreate(roomId).Render(ctx.Context(), ctx.Writer())
 	}
 
-	pageRoomId(roomId).Render(ctx.Context(), ctx.Writer())
+	return pageRoomId(roomId).Render(ctx.Context(), ctx.Writer())
 }
 
 var wsUpgrader = websocket.Upgrader{}
 
-func wsId(ctx maruchi.ReqContext) {
-	reqContext := req.GetReqContext(ctx)
-
+func wsId(ctx req.ReqContext) error {
 	roomId := ctx.Req().PathValue("id")
 
-	if !reqContext.Rooms.HasRoom(roomId) {
-		ctx.Writer().WriteHeader(http.StatusNotFound)
-		return
+	if !ctx.Rooms.HasRoom(roomId) {
+		return req.ErrRoomDoesNotExist
 	}
 
 	playerId, err := ctx.Req().Cookie(req.CookiePlayerId.Name)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	playerName, err := ctx.Req().Cookie(req.CookiePlayerName.Name)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	room, ok := reqContext.Rooms.Room(roomId)
+	room, ok := ctx.Rooms.Room(roomId)
 	if !ok {
-		panic("room does not exist")
+		return req.ErrRoomDoesNotExist
 	}
 
 	ws, err := wsUpgrader.Upgrade(ctx.Writer(), ctx.Req(), nil)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	room.State(func(state game_state.GameState) error {
+	if err := room.State(func(state game_state.GameState) error {
 		state.Game().AddPlayer(game_state.NewPlayer(playerId.Value, playerName.Value))
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
 	defer room.State(func(state game_state.GameState) error { // 3. sync changes to others
 		// this does not remove a player if it is not the start of the game
 		if game, ok := state.(*game_state.Game); ok {
@@ -135,7 +128,7 @@ func wsId(ctx maruchi.ReqContext) {
 	defer ws.Close()               // 1. close the ws conn
 
 	if err := syncGame(room); err != nil {
-		panic(err)
+		return err
 	}
 
 	// the main game loop, events are as follows:
@@ -145,13 +138,12 @@ func wsId(ctx maruchi.ReqContext) {
 	for {
 		_, bytes, err := ws.ReadMessage()
 		if err != nil {
-			fmt.Println(err)
-			break
+			return err
 		}
 
 		var action game_state.Action
 		if err := json.Unmarshal(bytes, &action); err != nil {
-			panic(err)
+			return err
 		}
 
 		switch action.Action {
@@ -161,13 +153,13 @@ func wsId(ctx maruchi.ReqContext) {
 				*state = game.Start()
 				return nil
 			}); err != nil {
-				panic(err)
+				return err
 			}
 
 		case game_state.ActionPlayerChooseWord:
 			var action game_state.ActionPlayerChooseWordJson
 			if err := json.Unmarshal(bytes, &action); err != nil {
-				panic(err)
+				return err
 			}
 
 			if err := room.StateRef(func(state *game_state.GameState) error {
@@ -180,12 +172,12 @@ func wsId(ctx maruchi.ReqContext) {
 				*state = game.Choose(action.WordIndex)
 				return nil
 			}); err != nil {
-				panic(err)
+				return err
 			}
 		case game_state.ActionPlayerSaySynonym:
 			var action game_state.ActionPlayerSaySynonymJson
 			if err := json.Unmarshal(bytes, &action); err != nil {
-				panic(err)
+				return err
 			}
 
 			if err := room.State(func(state game_state.GameState) error {
@@ -198,19 +190,19 @@ func wsId(ctx maruchi.ReqContext) {
 				game.SaySynonym(action.Synonym)
 				return nil
 			}); err != nil {
-				panic(err)
+				return err
 			}
 		default:
-			panic("unsupported action")
+			return req.ErrUnknownAction
 		}
 
 		if err := syncGame(room); err != nil {
-			panic(err)
+			return err
 		}
 	}
 }
 
-func unsafeSyncGame(state game_state.GameState, to *ws.Room) []error {
+func unsafeSyncGame(state game_state.GameState, to *ws.Room) error {
 	return to.WriteEach(func(writer io.Writer, data any) error {
 		return partialGameState(state, data.(string)).Render(context.Background(), writer)
 	})
@@ -218,11 +210,6 @@ func unsafeSyncGame(state game_state.GameState, to *ws.Room) []error {
 
 func syncGame(room *game_state.Room) error {
 	return room.State(func(state game_state.GameState) error {
-		if err := unsafeSyncGame(state, room.WsRoom()); err != nil {
-			// todo:
-			fmt.Println(err)
-		}
-
-		return nil
+		return unsafeSyncGame(state, room.WsRoom())
 	})
 }

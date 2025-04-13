@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"word-amongus-game/pkgs/controllers"
+	"word-amongus-game/pkgs/game_state"
+	"word-amongus-game/pkgs/server/controllers"
 	"word-amongus-game/pkgs/server/req"
 
 	"github.com/tronikelis/maruchi"
@@ -24,14 +25,7 @@ func main() {
 		}).
 		Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
-	reqContext := req.NewReqContext()
-
-	server.Middleware(func(ctx maruchi.ReqContext, next func(ctx maruchi.ReqContext)) {
-		ctxBase := ctx.(maruchi.ReqContextBase)
-		req.InitContext(&ctxBase, reqContext)
-
-		next(ctxBase)
-	})
+	server.Middleware(req.MiddlewareReqContext(game_state.NewRooms()))
 
 	controllers.Register(server)
 

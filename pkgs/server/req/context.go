@@ -1,75 +1,39 @@
 package req
 
 import (
-	"context"
-	// "sync"
+	"log"
+	"net/http"
 
 	"word-amongus-game/pkgs/game_state"
 
-	// "github.com/gorilla/websocket"
 	"github.com/tronikelis/maruchi"
 )
 
-const (
-	ContextKey int = iota
-)
-
-// // methods are concurency safe
-// type WsByPlayerId struct {
-// 	mu           *sync.Mutex
-// 	wsByPlayerId map[string]*websocket.Conn
-// }
-//
-// // map[key]
-// func (self WsByPlayerId) Load(playerId string) (*websocket.Conn, bool) {
-// 	self.mu.Lock()
-// 	defer self.mu.Unlock()
-//
-// 	ws, ok := self.wsByPlayerId[playerId]
-// 	return ws, ok
-// }
-//
-// func (self WsByPlayerId) Insert(playerId string, ws *websocket.Conn) {
-// 	self.mu.Lock()
-// 	defer self.mu.Unlock()
-// 	self.wsByPlayerId[playerId] = ws
-// }
-//
-// func (self WsByPlayerId) Delete(playerId string) {
-// 	self.mu.Lock()
-// 	defer self.mu.Unlock()
-// 	delete(self.wsByPlayerId, playerId)
-// }
-//
-// func NewWsByPlayerId() WsByPlayerId {
-// 	return WsByPlayerId{
-// 		mu:           &sync.Mutex{},
-// 		wsByPlayerId: map[string]*websocket.Conn{},
-// 	}
-// }
-
 type ReqContext struct {
+	maruchi.ReqContext
 	Rooms game_state.Rooms
-	// WsByPlayerId WsByPlayerId
 }
 
-func NewReqContext() ReqContext {
-	return ReqContext{
-		Rooms: game_state.NewRooms(),
-		// WsByPlayerId: NewWsByPlayerId(),
+func MiddlewareReqContext(rooms game_state.Rooms) maruchi.Middleware {
+	return func(ctx maruchi.ReqContext, next maruchi.Handler) {
+		next(ReqContext{
+			ReqContext: ctx,
+			Rooms:      rooms,
+		})
 	}
 }
 
-func InitContext(request *maruchi.ReqContextBase, reqContext ReqContext) {
-	newContext := context.WithValue(
-		request.Context(),
-		ContextKey,
-		reqContext,
-	)
+func WithReqContext(handler func(ctx ReqContext) error) maruchi.Handler {
+	return func(ctx maruchi.ReqContext) {
+		if err := handler(ctx.(ReqContext)); err != nil {
+			log.Println("WithReqContextErr", "err", err)
 
-	request.R = request.R.WithContext(newContext)
-}
+			ctx.Writer().Header().Set("content-type", "text/plain")
 
-func GetReqContext(ctx maruchi.ReqContext) ReqContext {
-	return ctx.Context().Value(ContextKey).(ReqContext)
+			ctx.Writer().WriteHeader(http.StatusInternalServerError)
+			if _, err := ctx.Writer().Write([]byte(err.Error())); err != nil {
+				log.Println("WithReqContextWriteErr", "err")
+			}
+		}
+	}
 }

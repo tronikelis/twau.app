@@ -3,6 +3,7 @@ package ws
 import (
 	"container/list"
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -24,9 +25,20 @@ func NewRoom() *Room {
 	}
 }
 
+type ErrorSlice []error
+
+func (self ErrorSlice) Error() string {
+	msgs := make([]string, len(self))
+	for i, v := range self {
+		msgs[i] = v.Error()
+	}
+	return strings.Join(msgs, ", ")
+}
+
+// returns ErrorSlice on error
 // calls `write` concurrently for each conn with its data,
 // errors here should probably be just logged and ignored
-func (self *Room) WriteEach(write func(writer io.Writer, data any) error) []error {
+func (self *Room) WriteEach(write func(writer io.Writer, data any) error) error {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
@@ -36,7 +48,7 @@ func (self *Room) WriteEach(write func(writer io.Writer, data any) error) []erro
 	for i, v := range conns {
 		writer, err := v.NextWriter(websocket.TextMessage)
 		if err != nil {
-			return []error{err}
+			return ErrorSlice{err}
 		}
 		defer writer.Close()
 		writers[i] = writer
@@ -50,19 +62,20 @@ func (self *Room) WriteEach(write func(writer io.Writer, data any) error) []erro
 		}()
 	}
 
-	var errors []error
+	var errorSlice ErrorSlice
 	for range writers {
 		if err := <-errChan; err != nil {
-			errors = append(errors, err)
+			errorSlice = append(errorSlice, err)
 		}
 	}
 
-	return errors
+	return errorSlice
 }
 
+// returns ErrorSlice on error
 // writes to all conns,
 // errors here should probably be just logged and ignored
-func (self *Room) WriteAll(write func(writer io.Writer) error) []error {
+func (self *Room) WriteAll(write func(writer io.Writer) error) error {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
@@ -82,13 +95,13 @@ func (self *Room) WriteAll(write func(writer io.Writer) error) []error {
 	for i, v := range conns {
 		writer, err := v.NextWriter(websocket.TextMessage)
 		if err != nil {
-			return []error{err}
+			return ErrorSlice{err}
 		}
 		defer writer.Close()
 		writers[i] = writer
 	}
 
-	var errors []error
+	var errors ErrorSlice
 
 	buf := make([]byte, 0, 512)
 	end := false
@@ -99,7 +112,7 @@ func (self *Room) WriteAll(write func(writer io.Writer) error) []error {
 		if err != nil {
 			end = true
 			if err != io.EOF {
-				return []error{err}
+				return ErrorSlice{err}
 			}
 		}
 
