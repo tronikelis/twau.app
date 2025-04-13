@@ -15,9 +15,43 @@ import (
 	"github.com/tronikelis/maruchi"
 )
 
-var wsUpgrader = websocket.Upgrader{}
+func postId(ctx maruchi.ReqContext) {
+	reqContext := req.GetReqContext(ctx)
 
-func getRoomId(ctx maruchi.ReqContext) {
+	roomId := ctx.Req().PathValue("id")
+
+	playerName := ctx.Req().PostFormValue("player_name")
+
+	playerId, err := game_state.RandomHex()
+	if err != nil {
+		panic(err)
+	}
+
+	room, ok := reqContext.Rooms.Room(roomId)
+	if !ok {
+		panic("room does not exist")
+	}
+
+	if err := room.State(func(state game_state.GameState) error {
+		state.Game().AddPlayer(game_state.NewPlayer(playerId, playerName))
+		return nil
+	}); err != nil {
+		panic(err)
+	}
+
+	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))
+
+	playerIdCookie := req.CookiePlayerId
+	playerIdCookie.Value = playerId
+
+	playerNameCookie := req.CookiePlayerName
+	playerNameCookie.Value = playerName
+
+	http.SetCookie(ctx.Writer(), &playerIdCookie)
+	http.SetCookie(ctx.Writer(), &playerNameCookie)
+}
+
+func getId(ctx maruchi.ReqContext) {
 	reqContext := req.GetReqContext(ctx)
 
 	roomId := ctx.Req().PathValue("id")
@@ -27,19 +61,23 @@ func getRoomId(ctx maruchi.ReqContext) {
 		return
 	}
 
-	// playerName, err := ctx.Req().Cookie(req.CookiePlayerName.Name)
-	// if err != nil {
-	// 	return pagePlayerCreate()
-	// }
-	// playerId, err := ctx.Req().Cookie(req.CookiePlayerId.Name)
-	// if err != nil {
-	// 	return pagePlayerCreate()
-	// }
+	_, err := ctx.Req().Cookie(req.CookiePlayerName.Name)
+	if err != nil {
+		pagePlayerCreate(roomId).Render(ctx.Context(), ctx.Writer())
+		return
+	}
+	_, err = ctx.Req().Cookie(req.CookiePlayerId.Name)
+	if err != nil {
+		pagePlayerCreate(roomId).Render(ctx.Context(), ctx.Writer())
+		return
+	}
 
 	pageRoomId(roomId).Render(ctx.Context(), ctx.Writer())
 }
 
-func wsRoomId(ctx maruchi.ReqContext) {
+var wsUpgrader = websocket.Upgrader{}
+
+func wsId(ctx maruchi.ReqContext) {
 	reqContext := req.GetReqContext(ctx)
 
 	roomId := ctx.Req().PathValue("id")
