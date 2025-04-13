@@ -117,7 +117,7 @@ func wsRoomId(ctx maruchi.ReqContext) {
 		}
 
 		switch action.Action {
-		case game_state.ACTION_START_GAME:
+		case game_state.ActionStartGame:
 			if err := room.StateRef(func(state *game_state.GameState) error {
 				game := (*state).(*game_state.Game)
 				*state = game.Start()
@@ -126,6 +126,42 @@ func wsRoomId(ctx maruchi.ReqContext) {
 				panic(err)
 			}
 
+		case game_state.ActionPlayerChooseWord:
+			var action game_state.ActionPlayerChooseWordJson
+			if err := json.Unmarshal(bytes, &action); err != nil {
+				panic(err)
+			}
+
+			if err := room.StateRef(func(state *game_state.GameState) error {
+				game := (*state).(*game_state.PlayerChooseWord)
+
+				if !game_state.CheckSamePlayer(game, playerId.Value) {
+					return fmt.Errorf("It's not your turn")
+				}
+
+				*state = game.Choose(action.WordIndex)
+				return nil
+			}); err != nil {
+				panic(err)
+			}
+		case game_state.ActionPlayerSaySynonym:
+			var action game_state.ActionPlayerSaySynonymJson
+			if err := json.Unmarshal(bytes, &action); err != nil {
+				panic(err)
+			}
+
+			if err := room.State(func(state game_state.GameState) error {
+				game := state.(*game_state.PlayerTurn)
+
+				if !game_state.CheckSamePlayer(game, playerId.Value) {
+					return fmt.Errorf("It's not your turn")
+				}
+
+				game.SaySynonym(action.Synonym)
+				return nil
+			}); err != nil {
+				panic(err)
+			}
 		default:
 			panic("unsupported action")
 		}

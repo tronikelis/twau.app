@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"word-amongus-game/pkgs/controllers"
@@ -34,7 +35,12 @@ func main() {
 
 	controllers.Register(server)
 
-	if err := http.ListenAndServe("localhost:3000", server.ServeMux()); err != nil {
-		panic(err)
-	}
+	errChan := make(chan error)
+	go func() {
+		errChan <- http.ListenAndServe("localhost:3000", server.ServeMux())
+	}()
+
+	fmt.Println("listening on 3000")
+
+	panic(<-errChan)
 }

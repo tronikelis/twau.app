@@ -58,20 +58,66 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 						game
 					case *game_state.PlayerChooseWord:
 						player_choose_word
+					case *game_state.PlayerTurn:
+						player_turn
 				}
 			</span>
 		</h2>
-		switch state.(type) {
+		switch state := state.(type) {
 			case *game_state.Game:
 				<button
 					type="button"
 					ws-send
-					hx-vals={ `{
-						"action": "start_game"
-					}` }
+					hx-vals={ game_state.SerializeJsonPanic(
+						game_state.NewActionStartGameJson(),
+					) }
 				>
 					Start game
 				</button>
+			case *game_state.PlayerChooseWord:
+				if state.Game().Players()[state.PlayerIndex()].Id == selfPlayerId {
+					for i, v := range state.FromWords() {
+						<button
+							type="button"
+							ws-send
+							hx-vals={ game_state.SerializeJsonPanic(
+								game_state.NewActionPlayerChooseWordJson(i),
+							) }
+						>
+							{ v }
+						</button>
+					}
+				} else {
+					<p>
+						Wait for slow ass { state.Game().Players()[state.PlayerIndex()].Name }
+						to choose his word
+					</p>
+				}
+			case *game_state.PlayerTurn:
+				if state.Game().Players()[state.PlayerIndex()].Id == selfPlayerId {
+					<p>It's your turn, what do you want to do?</p>
+					<div class="flex flex-row gap-2 items-center">
+						<input type="text" name="synonym" placeholder="Synonym:"/>
+						<button
+							type="button"
+							ws-send
+							hx-vals={ game_state.SerializeJsonPanic(
+								game_state.NewActionPlayerSaySynonymJson(),
+							) }
+							hx-include="previous"
+						>
+							Say synonym
+						</button>
+					</div>
+					<button type="button">
+						Initialize vote
+					</button>
+				} else {
+					<p>
+						Wait for { state.Game().Players()[state.PlayerIndex()].Name } to 
+						make his decision
+					</p>
+				}
 		}
 	</div>
 }
