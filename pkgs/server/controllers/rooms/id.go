@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"word-amongus-game/pkgs/game_state"
@@ -93,7 +94,7 @@ func wsId(ctx req.ReqContext) error {
 		return req.ErrRoomDoesNotExist
 	}
 
-	ws, err := wsUpgrader.Upgrade(ctx.Writer(), ctx.Req(), nil)
+	socket, err := wsUpgrader.Upgrade(ctx.Writer(), ctx.Req(), nil)
 	if err != nil {
 		return err
 	}
@@ -117,18 +118,18 @@ func wsId(ctx req.ReqContext) error {
 		// }
 
 		if err := unsafeSyncGame(state, room.WsRoom()); err != nil {
-			fmt.Println(err)
+			log.Println("unsafeSyncGame", "err", err)
 		}
 
 		return nil
 	})
 
-	room.WsRoom().Add(ws, playerId.Value)
-	defer room.WsRoom().Delete(ws) // 2. remove from ws room
-	defer ws.Close()               // 1. close the ws conn
+	room.WsRoom().Add(socket, playerId.Value)
+	defer room.WsRoom().Delete(socket) // 2. remove from ws room
+	defer socket.Close()               // 1. close the ws conn
 
 	if err := syncGame(room); err != nil {
-		return err
+		log.Println("syncGame", "err", err)
 	}
 
 	// the main game loop, events are as follows:
@@ -136,7 +137,7 @@ func wsId(ctx req.ReqContext) error {
 	// 2. change game state according to the action
 	// 3. sync updated game state to all clients
 	for {
-		_, bytes, err := ws.ReadMessage()
+		_, bytes, err := socket.ReadMessage()
 		if err != nil {
 			return err
 		}
@@ -166,7 +167,7 @@ func wsId(ctx req.ReqContext) error {
 				game := (*state).(*game_state.PlayerChooseWord)
 
 				if !game_state.CheckSamePlayer(game, playerId.Value) {
-					return fmt.Errorf("It's not your turn")
+					return req.ErrNotYourTurn
 				}
 
 				*state = game.Choose(action.WordIndex)
@@ -184,7 +185,7 @@ func wsId(ctx req.ReqContext) error {
 				game := state.(*game_state.PlayerTurn)
 
 				if !game_state.CheckSamePlayer(game, playerId.Value) {
-					return fmt.Errorf("It's not your turn")
+					return req.ErrNotYourTurn
 				}
 
 				game.SaySynonym(action.Synonym)
@@ -197,7 +198,7 @@ func wsId(ctx req.ReqContext) error {
 		}
 
 		if err := syncGame(room); err != nil {
-			return err
+			log.Println("syncGame", "err", err)
 		}
 	}
 }

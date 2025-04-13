@@ -62,14 +62,19 @@ func (self *Room) WriteEach(write func(writer io.Writer, data any) error) error 
 		}()
 	}
 
-	var errorSlice ErrorSlice
+	var errors ErrorSlice
 	for range writers {
 		if err := <-errChan; err != nil {
-			errorSlice = append(errorSlice, err)
+			errors = append(errors, err)
 		}
 	}
 
-	return errorSlice
+	// don't remove this
+	if errors == nil {
+		return nil
+	}
+
+	return errors
 }
 
 // returns ErrorSlice on error
@@ -130,6 +135,11 @@ func (self *Room) WriteAll(write func(writer io.Writer) error) error {
 				errors = append(errors, err)
 			}
 		}
+	}
+
+	// don't remove this
+	if errors == nil {
+		return nil
 	}
 
 	return errors

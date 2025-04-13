@@ -26,13 +26,13 @@ func MiddlewareReqContext(rooms game_state.Rooms) maruchi.Middleware {
 func WithReqContext(handler func(ctx ReqContext) error) maruchi.Handler {
 	return func(ctx maruchi.ReqContext) {
 		if err := handler(ctx.(ReqContext)); err != nil {
-			log.Println("WithReqContextErr", "err", err)
+			log.Println("WithReqContext_Err", "err", err)
 
 			ctx.Writer().Header().Set("content-type", "text/plain")
 
 			ctx.Writer().WriteHeader(http.StatusInternalServerError)
 			if _, err := ctx.Writer().Write([]byte(err.Error())); err != nil {
-				log.Println("WithReqContextWriteErr", "err")
+				log.Println("WithReqContext_WriteErr", "err", err)
 			}
 		}
 	}
