@@ -37,15 +37,17 @@ templ pageRoomId(roomId string) {
 
 templ partialGameState(state game_state.GameState, selfPlayerId string) {
 	<div id="game_state" class="grid grid-cols-12 gap-16" hx-swap-oob="outerHTML">
-		<div class="col-span-3">
-			@partialPlayers(state, selfPlayerId)
-		</div>
-		<div class="col-span-6">
-			@partialPlayerAction(state, selfPlayerId)
-		</div>
-		<div class="col-span-3">
-			@partialGameSynonyms(state)
-		</div>
+		if state != nil {
+			<div class="col-span-3">
+				@partialPlayers(state, selfPlayerId)
+			</div>
+			<div class="col-span-6">
+				@partialPlayerAction(state, selfPlayerId)
+			</div>
+			<div class="col-span-3">
+				@partialGameSynonyms(state)
+			</div>
+		}
 	</div>
 }
 
@@ -63,7 +65,7 @@ templ partialGameSynonyms(state game_state.GameState) {
 }
 
 templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
-	<div id="player_action" hx-swap-oob="outerHTML" class="flex flex-col gap-6">
+	<div id="player_action" class="flex flex-col gap-6">
 		<h2 class="text-4xl">
 			State:
 			<span class="italic">
@@ -77,6 +79,31 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				}
 			</span>
 		</h2>
+		if state.Game().Imposter().Id != "" {
+			<h3 class="text-3xl">
+				Your role: 
+				<span class="italic">
+					if state.Game().Imposter().Id == selfPlayerId {
+						Imposter
+					} else {
+						Crewmate
+					}
+				</span>
+			</h3>
+		}
+		if state.Game().Word() != "" {
+			<h4 class="text-2xl">
+				The word is:
+				<span class="italic">
+					if state.Game().Imposter().Id == selfPlayerId {
+						???
+					} else {
+						{ state.Game().Word() }
+					}
+				</span>
+			</h4>
+		}
+		<hr class="my-4"/>
 		switch state := state.(type) {
 			case *game_state.Game:
 				<button
@@ -110,10 +137,10 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 			case *game_state.PlayerTurn:
 				if state.Game().Players()[state.PlayerIndex()].Id == selfPlayerId {
 					<p>It's your turn, what do you want to do?</p>
-					<div class="flex flex-row gap-2 items-center">
+					<form class="flex flex-row gap-2 items-center">
 						<input type="text" name="synonym" placeholder="Synonym:"/>
 						<button
-							type="button"
+							type="submit"
 							ws-send
 							hx-vals={ game_state.SerializeJsonPanic(
 								game_state.NewActionPlayerSaySynonymJson(),
@@ -122,7 +149,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 						>
 							Say synonym
 						</button>
-					</div>
+					</form>
 					<button type="button">
 						Initialize vote
 					</button>
@@ -153,7 +180,6 @@ templ partialPlayers(state game_state.GameState, selfPlayerId string) {
 	<div
 		class="flex flex-col gap-6"
 		id="players"
-		hx-swap-oob="outerHTML"
 	>
 		<h2 class="text-4xl">Players</h2>
 		switch state := state.(type) {

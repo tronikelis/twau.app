@@ -52,6 +52,14 @@ func NewGame() *Game {
 	return &Game{}
 }
 
+func (self *Game) Word() string {
+	return self.word
+}
+
+func (self *Game) Imposter() Player {
+	return self.imposter
+}
+
 func (self *Game) Synonyms() []PlayerSynonym {
 	return self.synonyms
 }
@@ -84,12 +92,14 @@ func (self *Game) Reset() {
 	self.word = ""
 	self.synonyms = nil
 	self.imposter = Player{}
-	self.prevChosenPlayerIndex = 0
+	self.prevChosenPlayerIndex = -1
 }
 
 func (self *Game) Start() *PlayerChooseWord {
-	self.imposter = self.players[rand.IntN(len(self.players))]
-	return NewPlayerChooseWord(self)
+	imposterIndex := rand.IntN(len(self.players))
+	self.imposter = self.players[imposterIndex]
+
+	return NewPlayerChooseWord(self, imposterIndex)
 }
 
 // idempotent
@@ -148,8 +158,16 @@ type PlayerTurn struct {
 }
 
 func newPlayerTurn(game *Game) *PlayerTurn {
+	// we don't want to make imposter choose the first word
+	// as that makes the game be over instantly
+	playerIndex := rand.IntN(len(game.players))
+	if game.imposter.Id == game.players[playerIndex].Id {
+		playerIndex = (playerIndex + 1) % len(game.players)
+	}
+
 	return &PlayerTurn{
-		game: game,
+		game:        game,
+		playerIndex: playerIndex,
 	}
 }
 
@@ -181,11 +199,16 @@ type PlayerChooseWord struct {
 	fromWords   []string
 }
 
-func NewPlayerChooseWord(game *Game) *PlayerChooseWord {
+func NewPlayerChooseWord(game *Game, imposterIndex int) *PlayerChooseWord {
+	playerIndex := (game.prevChosenPlayerIndex + 1) % len(game.players)
+	if playerIndex == imposterIndex {
+		playerIndex = (playerIndex + 1) % len(game.players)
+	}
+
 	return &PlayerChooseWord{
 		game:        game,
 		fromWords:   allWords.RandomN(4),
-		playerIndex: (game.prevChosenPlayerIndex + 1) % len(game.players),
+		playerIndex: playerIndex,
 	}
 }
 
