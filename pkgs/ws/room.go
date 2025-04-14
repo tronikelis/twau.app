@@ -1,27 +1,28 @@
 package ws
 
 import (
-	"container/list"
 	"io"
+	"slices"
 	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
 )
 
+type connWithData struct {
+	conn *websocket.Conn
+	data any
+}
+
 // concurrency safe
 type Room struct {
-	conns *list.List
-	// extra info for websocket conn
-	data map[*websocket.Conn]any // idk maybe extract into generic for type safety, but more complicated
-	mu   *sync.Mutex
+	conns []connWithData
+	mu    *sync.Mutex
 }
 
 func NewRoom() *Room {
 	return &Room{
-		mu:    &sync.Mutex{},
-		conns: list.New(),
-		data:  map[*websocket.Conn]any{},
+		mu: &sync.Mutex{},
 	}
 }
 
@@ -42,11 +43,10 @@ func (self *Room) WriteEach(write func(writer io.Writer, data any) error) error 
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	conns := self.unsafeConns()
-	writers := make([]io.WriteCloser, len(conns))
+	writers := make([]io.WriteCloser, len(self.conns))
 
-	for i, v := range conns {
-		writer, err := v.NextWriter(websocket.TextMessage)
+	for i, v := range self.conns {
+		writer, err := v.conn.NextWriter(websocket.TextMessage)
 		if err != nil {
 			return ErrorSlice{err}
 		}
@@ -58,7 +58,7 @@ func (self *Room) WriteEach(write func(writer io.Writer, data any) error) error 
 	for i, v := range writers {
 		go func() {
 			// todo: this can take a long time, use a timeout probs
-			errChan <- write(v, self.data[conns[i]])
+			errChan <- write(v, self.conns[i].data)
 		}()
 	}
 
@@ -94,11 +94,10 @@ func (self *Room) WriteAll(write func(writer io.Writer) error) error {
 		}
 	}()
 
-	conns := self.unsafeConns()
-	writers := make([]io.WriteCloser, len(conns))
+	writers := make([]io.WriteCloser, len(self.conns))
 
-	for i, v := range conns {
-		writer, err := v.NextWriter(websocket.TextMessage)
+	for i, v := range self.conns {
+		writer, err := v.conn.NextWriter(websocket.TextMessage)
 		if err != nil {
 			return ErrorSlice{err}
 		}
@@ -145,38 +144,22 @@ func (self *Room) WriteAll(write func(writer io.Writer) error) error {
 	return errors
 }
 
-// WARNING: does not have mutex, used to call inside a mutex
-func (self *Room) unsafeConns() []*websocket.Conn {
-	conns := make([]*websocket.Conn, self.conns.Len())
-
-	i := 0
-	for v := self.conns.Front(); v != nil; v = v.Next() {
-		conns[i] = v.Value.(*websocket.Conn)
-		i++
-	}
-
-	return conns
-}
-
 // data is optional
 func (self *Room) Add(conn *websocket.Conn, data any) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	self.conns.PushBack(conn)
-	self.data[conn] = data
+	self.conns = append(self.conns, connWithData{
+		data: data,
+		conn: conn,
+	})
 }
 
 func (self *Room) Delete(conn *websocket.Conn) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	for v := self.conns.Front(); v != nil; v = v.Next() {
-		if v.Value.(*websocket.Conn) == conn {
-			self.conns.Remove(v)
-			break
-		}
-	}
-
-	delete(self.data, conn)
+	self.conns = slices.DeleteFunc(self.conns, func(v connWithData) bool {
+		return v.conn == conn
+	})
 }
