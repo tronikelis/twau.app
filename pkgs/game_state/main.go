@@ -40,10 +40,9 @@ func newPlayerSynonym(synonym string, player Player) PlayerSynonym {
 }
 
 type Game struct {
-	word                  string
-	synonyms              []PlayerSynonym
-	players               []Player
-	prevChosenPlayerIndex int
+	word     string
+	synonyms []PlayerSynonym
+	players  []Player
 	// ඞ
 	imposter Player
 }
@@ -92,7 +91,6 @@ func (self *Game) Reset() {
 	self.word = ""
 	self.synonyms = nil
 	self.imposter = Player{}
-	self.prevChosenPlayerIndex = -1
 }
 
 func (self *Game) Start() *GamePlayerChooseWord {
@@ -193,7 +191,7 @@ type GamePlayerChooseWord struct {
 }
 
 func newGamePlayerChooseWord(game *Game, imposterIndex int) *GamePlayerChooseWord {
-	playerIndex := (game.prevChosenPlayerIndex + 1) % len(game.players)
+	playerIndex := rand.IntN(len(game.players))
 	// making imposter choose the word just does not make sense
 	if playerIndex == imposterIndex {
 		playerIndex = (playerIndex + 1) % len(game.players)
