@@ -111,8 +111,8 @@ func (self *Game) AddPlayer(player Player) {
 	self.players = append(self.players, player)
 }
 
-func (self *Game) PlayerTurn() *PlayerTurn {
-	return newPlayerTurn(self)
+func (self *Game) PlayerTurn(playerIndex int) *PlayerTurn {
+	return newPlayerTurn(self, playerIndex)
 }
 
 type VoteTurn struct {
@@ -157,14 +157,7 @@ type PlayerTurn struct {
 	playerIndex int
 }
 
-func newPlayerTurn(game *Game) *PlayerTurn {
-	// we don't want to make imposter choose the first word
-	// as that makes the game be over instantly
-	playerIndex := rand.IntN(len(game.players))
-	if game.imposter.Id == game.players[playerIndex].Id {
-		playerIndex = (playerIndex + 1) % len(game.players)
-	}
-
+func newPlayerTurn(game *Game, playerIndex int) *PlayerTurn {
 	return &PlayerTurn{
 		game:        game,
 		playerIndex: playerIndex,
@@ -201,6 +194,7 @@ type PlayerChooseWord struct {
 
 func NewPlayerChooseWord(game *Game, imposterIndex int) *PlayerChooseWord {
 	playerIndex := (game.prevChosenPlayerIndex + 1) % len(game.players)
+	// making imposter choose the word just does not make sense
 	if playerIndex == imposterIndex {
 		playerIndex = (playerIndex + 1) % len(game.players)
 	}
@@ -230,5 +224,5 @@ func (self *PlayerChooseWord) Choose(index int) *PlayerTurn {
 	}
 
 	self.game.word = self.fromWords[index]
-	return self.game.PlayerTurn()
+	return self.game.PlayerTurn(self.playerIndex)
 }
