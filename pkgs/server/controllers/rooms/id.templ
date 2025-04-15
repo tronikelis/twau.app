@@ -56,7 +56,7 @@ templ partialGameSynonyms(state game_state.GameState) {
 		<h2 class="text-4xl">Synonyms</h2>
 		<div class="flex flex-col gap-1">
 			if state != nil {
-				for _, v := range state.Game().Synonyms() {
+				for _, v := range state.GetGame().Synonyms() {
 					<p>{ v.Player.Name } -> { v.Synonym }</p>
 				}
 			}
@@ -79,11 +79,11 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				}
 			</span>
 		</h2>
-		if state.Game().Imposter().Id != "" {
+		if state.GetGame().Imposter().Id != "" {
 			<h3 class="text-3xl">
 				Your role: 
 				<span class="italic">
-					if state.Game().Imposter().Id == selfPlayerId {
+					if state.GetGame().Imposter().Id == selfPlayerId {
 						Imposter
 					} else {
 						Crewmate
@@ -91,14 +91,14 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				</span>
 			</h3>
 		}
-		if state.Game().Word() != "" {
+		if state.GetGame().Word() != "" {
 			<h4 class="text-2xl">
 				The word is:
 				<span class="italic">
-					if state.Game().Imposter().Id == selfPlayerId {
+					if state.GetGame().Imposter().Id == selfPlayerId {
 						???
 					} else {
-						{ state.Game().Word() }
+						{ state.GetGame().Word() }
 					}
 				</span>
 			</h4>
@@ -116,7 +116,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					Start game
 				</button>
 			case *game_state.PlayerChooseWord:
-				if state.Game().Players()[state.PlayerIndex()].Id == selfPlayerId {
+				if state.GetGame().Players()[state.PlayerIndex()].Id == selfPlayerId {
 					for i, v := range state.FromWords() {
 						<button
 							type="button"
@@ -130,12 +130,12 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					}
 				} else {
 					<p>
-						Wait for slow ass { state.Game().Players()[state.PlayerIndex()].Name }
+						Wait for slow ass { state.GetGame().Players()[state.PlayerIndex()].Name }
 						to choose his word
 					</p>
 				}
 			case *game_state.PlayerTurn:
-				if state.Game().Players()[state.PlayerIndex()].Id == selfPlayerId {
+				if state.GetGame().Players()[state.PlayerIndex()].Id == selfPlayerId {
 					<p>It's your turn, what do you want to do?</p>
 					<form class="flex flex-row gap-2 items-center">
 						<input type="text" name="synonym" placeholder="Synonym:"/>
@@ -155,7 +155,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					</button>
 				} else {
 					<p>
-						Wait for { state.Game().Players()[state.PlayerIndex()].Name } to 
+						Wait for { state.GetGame().Players()[state.PlayerIndex()].Name } to 
 						make his decision
 					</p>
 				}
@@ -190,7 +190,7 @@ templ partialPlayers(state game_state.GameState, selfPlayerId string) {
 					}
 				}
 			case game_state.PlayerIndex:
-				for i, v := range state.Game().Players() {
+				for i, v := range state.GetGame().Players() {
 					@playerCard(v, state.PlayerIndex() == i, selfPlayerId) {
 						{ v.Name }
 					}

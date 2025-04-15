@@ -5,8 +5,10 @@ import (
 	"slices"
 )
 
+const defaultTurnsLeft int = 10
+
 type GameState interface {
-	Game() *Game
+	GetGame() *Game
 }
 
 type PlayerIndex interface {
@@ -15,7 +17,7 @@ type PlayerIndex interface {
 }
 
 func CheckSamePlayer(playerIndex PlayerIndex, playerId string) bool {
-	return playerIndex.Game().Players()[playerIndex.PlayerIndex()].Id == playerId
+	return playerIndex.GetGame().Players()[playerIndex.PlayerIndex()].Id == playerId
 }
 
 type Player struct {
@@ -40,6 +42,7 @@ func newPlayerSynonym(synonym string, player Player) PlayerSynonym {
 }
 
 type Game struct {
+	turnsLeft             int
 	word                  string
 	synonyms              []PlayerSynonym
 	players               []Player
@@ -49,7 +52,9 @@ type Game struct {
 }
 
 func NewGame() *Game {
-	return &Game{}
+	return &Game{
+		turnsLeft: defaultTurnsLeft,
+	}
 }
 
 func (self *Game) Word() string {
@@ -84,11 +89,12 @@ func (self *Game) Players() []Player {
 	return self.players
 }
 
-func (self *Game) Game() *Game {
+func (self *Game) GetGame() *Game {
 	return self
 }
 
 func (self *Game) Reset() {
+	self.turnsLeft = defaultTurnsLeft
 	self.word = ""
 	self.synonyms = nil
 	self.imposter = Player{}
@@ -116,8 +122,7 @@ func (self *Game) PlayerTurn(playerIndex int) *PlayerTurn {
 }
 
 type VoteTurn struct {
-	game *Game
-
+	*Game
 	picks           map[Player]Player
 	playerIndex     int
 	initPlayerIndex int
@@ -125,21 +130,17 @@ type VoteTurn struct {
 
 func newVoteTurn(game *Game, playerIndex int) *VoteTurn {
 	return &VoteTurn{
-		game:            game,
+		Game:            game,
 		picks:           map[Player]Player{},
 		playerIndex:     playerIndex,
 		initPlayerIndex: playerIndex,
 	}
 }
 
-func (self *VoteTurn) Game() *Game {
-	return self.game
-}
-
 // returns false if voting has ended
 func (self *VoteTurn) Vote(player Player) bool {
-	self.picks[self.game.players[self.playerIndex]] = player
-	self.playerIndex = (self.playerIndex + 1) % len(self.game.players)
+	self.picks[self.players[self.playerIndex]] = player
+	self.playerIndex = (self.playerIndex + 1) % len(self.players)
 
 	if self.playerIndex == self.initPlayerIndex {
 		return false
@@ -153,23 +154,19 @@ func (self *VoteTurn) Picks() map[Player]Player {
 }
 
 type PlayerTurn struct {
-	game        *Game
+	*Game
 	playerIndex int
 }
 
 func newPlayerTurn(game *Game, playerIndex int) *PlayerTurn {
 	return &PlayerTurn{
-		game:        game,
+		Game:        game,
 		playerIndex: playerIndex,
 	}
 }
 
-func (self *PlayerTurn) Game() *Game {
-	return self.game
-}
-
 func (self *PlayerTurn) InitVote() *VoteTurn {
-	return newVoteTurn(self.game, self.playerIndex)
+	return newVoteTurn(self.Game, self.playerIndex)
 }
 
 func (self *PlayerTurn) PlayerIndex() int {
@@ -177,17 +174,24 @@ func (self *PlayerTurn) PlayerIndex() int {
 }
 
 // records player synonym and passes turn to next
-func (self *PlayerTurn) SaySynonym(synonym string) {
-	self.game.synonyms = append(
-		self.game.synonyms,
-		newPlayerSynonym(synonym, self.game.players[self.playerIndex]),
+// returns (new game state, should set)
+func (self *PlayerTurn) SaySynonym(synonym string) (GameState, bool) {
+	self.synonyms = append(
+		self.synonyms,
+		newPlayerSynonym(synonym, self.players[self.playerIndex]),
 	)
 
-	self.playerIndex = (self.playerIndex + 1) % len(self.game.players)
+	if synonym == self.word && self.players[self.playerIndex].Id == self.imposter.Id {
+		return NewImposterWon(self.Game), true
+	}
+
+	self.playerIndex = (self.playerIndex + 1) % len(self.players)
+
+	return nil, false
 }
 
 type PlayerChooseWord struct {
-	game        *Game
+	*Game
 	playerIndex int
 	fromWords   []string
 }
@@ -200,14 +204,10 @@ func NewPlayerChooseWord(game *Game, imposterIndex int) *PlayerChooseWord {
 	}
 
 	return &PlayerChooseWord{
-		game:        game,
+		Game:        game,
 		fromWords:   allWords.RandomN(4),
 		playerIndex: playerIndex,
 	}
-}
-
-func (self *PlayerChooseWord) Game() *Game {
-	return self.game
 }
 
 func (self *PlayerChooseWord) FromWords() []string {
@@ -223,6 +223,22 @@ func (self *PlayerChooseWord) Choose(index int) *PlayerTurn {
 		index = 0
 	}
 
-	self.game.word = self.fromWords[index]
-	return self.game.PlayerTurn(self.playerIndex)
+	self.word = self.fromWords[index]
+	return self.PlayerTurn(self.playerIndex)
+}
+
+type CrewmateWon struct {
+	*Game
+}
+
+func NewCrewmateWon(game *Game) *CrewmateWon {
+	return &CrewmateWon{Game: game}
+}
+
+type ImposterWon struct {
+	*Game
+}
+
+func NewImposterWon(game *Game) *ImposterWon {
+	return &ImposterWon{Game: game}
 }

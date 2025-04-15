@@ -31,7 +31,7 @@ func postId(ctx req.ReqContext) error {
 	}
 
 	if err := room.State(func(state game_state.GameState) error {
-		state.Game().AddPlayer(game_state.NewPlayer(playerId, playerName))
+		state.GetGame().AddPlayer(game_state.NewPlayer(playerId, playerName))
 		return nil
 	}); err != nil {
 		return err
@@ -100,7 +100,7 @@ func wsId(ctx req.ReqContext) error {
 	}
 
 	if err := room.State(func(state game_state.GameState) error {
-		state.Game().AddPlayer(game_state.NewPlayer(playerId.Value, playerName.Value))
+		state.GetGame().AddPlayer(game_state.NewPlayer(playerId.Value, playerName.Value))
 		return nil
 	}); err != nil {
 		return err
