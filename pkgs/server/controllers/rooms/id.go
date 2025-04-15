@@ -164,7 +164,7 @@ func wsId(ctx req.ReqContext) error {
 			}
 
 			if err := room.StateRef(func(state *game_state.GameState) error {
-				game := (*state).(*game_state.PlayerChooseWord)
+				game := (*state).(*game_state.GamePlayerChooseWord)
 
 				if !game_state.CheckSamePlayer(game, playerId.Value) {
 					return req.ErrNotYourTurn
@@ -182,7 +182,7 @@ func wsId(ctx req.ReqContext) error {
 			}
 
 			if err := room.StateRef(func(state *game_state.GameState) error {
-				game := (*state).(*game_state.PlayerTurn)
+				game := (*state).(*game_state.GamePlayerTurn)
 
 				if !game_state.CheckSamePlayer(game, playerId.Value) {
 					return req.ErrNotYourTurn

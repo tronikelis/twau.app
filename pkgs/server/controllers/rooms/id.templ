@@ -72,11 +72,11 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				switch state.(type) {
 					case *game_state.Game:
 						game
-					case *game_state.PlayerChooseWord:
+					case *game_state.GamePlayerChooseWord:
 						player_choose_word
-					case *game_state.PlayerTurn:
+					case *game_state.GamePlayerTurn:
 						player_turn
-					case *game_state.ImposterWon:
+					case *game_state.GameImposterWon:
 						imposter_won
 				}
 			</span>
@@ -117,7 +117,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				>
 					Start game
 				</button>
-			case *game_state.PlayerChooseWord:
+			case *game_state.GamePlayerChooseWord:
 				if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
 					for i, v := range state.FromWords() {
 						<button
@@ -136,7 +136,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 						to choose his word
 					</p>
 				}
-			case *game_state.PlayerTurn:
+			case *game_state.GamePlayerTurn:
 				if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
 					<p>It's your turn, what do you want to do?</p>
 					<form class="flex flex-row gap-2 items-center">
@@ -161,7 +161,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 						make his decision
 					</p>
 				}
-			case *game_state.ImposterWon:
+			case *game_state.GameImposterWon:
 				<p>
 					GG, imposter won
 				</p>
