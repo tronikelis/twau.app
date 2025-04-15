@@ -4,6 +4,7 @@ import "net/http"
 
 var (
 	CookiePlayerId http.Cookie = http.Cookie{
+		Path:     "/",
 		Name:     "player_id",
 		SameSite: http.SameSiteLaxMode,
 		HttpOnly: false,
@@ -11,6 +12,7 @@ var (
 	}
 
 	CookiePlayerName http.Cookie = http.Cookie{
+		Path:     "/",
 		Name:     "player_name",
 		SameSite: http.SameSiteLaxMode,
 		HttpOnly: false,

@@ -5,8 +5,6 @@ import (
 	"slices"
 )
 
-const defaultTurnsLeft int = 10
-
 type GameState interface {
 	GetGame() *Game
 }
@@ -42,7 +40,6 @@ func newPlayerSynonym(synonym string, player Player) PlayerSynonym {
 }
 
 type Game struct {
-	turnsLeft             int
 	word                  string
 	synonyms              []PlayerSynonym
 	players               []Player
@@ -52,9 +49,7 @@ type Game struct {
 }
 
 func NewGame() *Game {
-	return &Game{
-		turnsLeft: defaultTurnsLeft,
-	}
+	return &Game{}
 }
 
 func (self *Game) Word() string {
@@ -94,7 +89,6 @@ func (self *Game) GetGame() *Game {
 }
 
 func (self *Game) Reset() {
-	self.turnsLeft = defaultTurnsLeft
 	self.word = ""
 	self.synonyms = nil
 	self.imposter = Player{}
@@ -102,6 +96,8 @@ func (self *Game) Reset() {
 }
 
 func (self *Game) Start() *PlayerChooseWord {
+	self.Reset()
+
 	imposterIndex := rand.IntN(len(self.players))
 	self.imposter = self.players[imposterIndex]
 

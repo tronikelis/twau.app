@@ -181,14 +181,17 @@ func wsId(ctx req.ReqContext) error {
 				return err
 			}
 
-			if err := room.State(func(state game_state.GameState) error {
-				game := state.(*game_state.PlayerTurn)
+			if err := room.StateRef(func(state *game_state.GameState) error {
+				game := (*state).(*game_state.PlayerTurn)
 
 				if !game_state.CheckSamePlayer(game, playerId.Value) {
 					return req.ErrNotYourTurn
 				}
 
-				game.SaySynonym(action.Synonym)
+				if newState, ok := game.SaySynonym(action.Synonym); ok {
+					*state = newState
+				}
+
 				return nil
 			}); err != nil {
 				return err

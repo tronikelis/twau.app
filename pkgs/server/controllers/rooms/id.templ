@@ -76,6 +76,8 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 						player_choose_word
 					case *game_state.PlayerTurn:
 						player_turn
+					case *game_state.ImposterWon:
+						imposter_won
 				}
 			</span>
 		</h2>
@@ -116,7 +118,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					Start game
 				</button>
 			case *game_state.PlayerChooseWord:
-				if state.GetGame().Players()[state.PlayerIndex()].Id == selfPlayerId {
+				if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
 					for i, v := range state.FromWords() {
 						<button
 							type="button"
@@ -130,12 +132,12 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					}
 				} else {
 					<p>
-						Wait for slow ass { state.GetGame().Players()[state.PlayerIndex()].Name }
+						Wait for slow ass { state.Players()[state.PlayerIndex()].Name }
 						to choose his word
 					</p>
 				}
 			case *game_state.PlayerTurn:
-				if state.GetGame().Players()[state.PlayerIndex()].Id == selfPlayerId {
+				if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
 					<p>It's your turn, what do you want to do?</p>
 					<form class="flex flex-row gap-2 items-center">
 						<input type="text" name="synonym" placeholder="Synonym:"/>
@@ -155,10 +157,17 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					</button>
 				} else {
 					<p>
-						Wait for { state.GetGame().Players()[state.PlayerIndex()].Name } to 
+						Wait for { state.Players()[state.PlayerIndex()].Name } to 
 						make his decision
 					</p>
 				}
+			case *game_state.ImposterWon:
+				<p>
+					GG, imposter won
+				</p>
+				<p>
+					Imposter was { state.Imposter().Name }
+				</p>
 		}
 	</div>
 }
