@@ -117,7 +117,7 @@ func (self *Game) PlayerTurn(playerIndex int) *GamePlayerTurn {
 
 type GameVoteTurn struct {
 	*Game
-	picks           map[Player]Player
+	picks           map[int]int
 	playerIndex     int
 	initPlayerIndex int
 }
@@ -125,15 +125,19 @@ type GameVoteTurn struct {
 func newGameVoteTurn(game *Game, playerIndex int) *GameVoteTurn {
 	return &GameVoteTurn{
 		Game:            game,
-		picks:           map[Player]Player{},
+		picks:           map[int]int{},
 		playerIndex:     playerIndex,
 		initPlayerIndex: playerIndex,
 	}
 }
 
+func (self *GameVoteTurn) PlayerIndex() int {
+	return self.playerIndex
+}
+
 // returns false if voting has ended
-func (self *GameVoteTurn) Vote(player Player) bool {
-	self.picks[self.players[self.playerIndex]] = player
+func (self *GameVoteTurn) Vote(playerIndex int) bool {
+	self.picks[self.playerIndex] = playerIndex
 	self.playerIndex = (self.playerIndex + 1) % len(self.players)
 
 	if self.playerIndex == self.initPlayerIndex {
@@ -144,7 +148,11 @@ func (self *GameVoteTurn) Vote(player Player) bool {
 }
 
 func (self *GameVoteTurn) Picks() map[Player]Player {
-	return self.picks
+	picks := map[Player]Player{}
+	for k, v := range self.picks {
+		picks[self.players[k]] = self.players[v]
+	}
+	return picks
 }
 
 type GamePlayerTurn struct {

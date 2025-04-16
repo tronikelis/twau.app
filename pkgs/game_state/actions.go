@@ -6,6 +6,7 @@ const (
 	ActionStartGame = iota
 	ActionPlayerChooseWord
 	ActionPlayerSaySynonym
+	ActionInitVote
 )
 
 type Action struct {
@@ -51,5 +52,15 @@ type ActionPlayerSaySynonymJson struct {
 func NewActionPlayerSaySynonymJson() ActionPlayerSaySynonymJson {
 	return ActionPlayerSaySynonymJson{
 		Action: Action{ActionPlayerSaySynonym},
+	}
+}
+
+type ActionInitVoteJson struct {
+	Action
+}
+
+func NewActionInitVoteJson() ActionInitVoteJson {
+	return ActionInitVoteJson{
+		Action: Action{ActionInitVote},
 	}
 }

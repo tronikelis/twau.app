@@ -148,11 +148,19 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 								game_state.NewActionPlayerSaySynonymJson(),
 							) }
 							hx-include="previous"
+							hx-disabled-elt="this"
 						>
 							Say synonym
 						</button>
 					</form>
-					<button type="button">
+					<button
+						type="button"
+						ws-send
+						hx-vals={ game_state.SerializeJsonPanic(
+							game_state.NewActionInitVoteJson(),
+						) }
+						hx-disabled-elt="this"
+					>
 						Initialize vote
 					</button>
 				} else {
@@ -168,6 +176,19 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				<p>
 					Imposter was { state.Imposter().Name }
 				</p>
+			case *game_state.GameVoteTurn:
+				if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
+					<p>Guess who is the imposter</p>
+					<div class="flex flex-row gap-4 flex-wrap">
+						for _, v := range state.Players() {
+							<button type="button">
+								{ v.Name }
+							</button>
+						}
+					</div>
+				} else {
+					Wait for { state.Players()[state.PlayerIndex()].Name } to choose the imposter
+				}
 		}
 	</div>
 }
