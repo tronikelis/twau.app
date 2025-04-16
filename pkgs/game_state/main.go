@@ -197,15 +197,15 @@ func (self *GameVoteTurn) Players(selfPlayerId string) []PlayerWithIndex {
 	return players
 }
 
-type PlayerPick struct {
+type PlayerPicked struct {
 	Player Player
 	Picked Player
 }
 
-func (self *GameVoteTurn) Picks() []PlayerPick {
-	picks := make([]PlayerPick, len(self.picks))
+func (self *GameVoteTurn) Picks() []PlayerPicked {
+	picks := make([]PlayerPicked, len(self.picks))
 	for i, v := range self.picks {
-		picks[i] = PlayerPick{
+		picks[i] = PlayerPicked{
 			Player: self.players[v.playerIndex],
 			Picked: self.players[v.pickedIndex],
 		}
