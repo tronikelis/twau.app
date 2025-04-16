@@ -18,6 +18,11 @@ func CheckSamePlayer(playerIndex PlayerIndex, playerId string) bool {
 	return playerIndex.GetGame().Players()[playerIndex.PlayerIndex()].Id == playerId
 }
 
+type PlayerWithIndex struct {
+	Player
+	Index int
+}
+
 type Player struct {
 	Id   string
 	Name string
@@ -115,9 +120,14 @@ func (self *Game) PlayerTurn(playerIndex int) *GamePlayerTurn {
 	return newGamePlayerTurn(self, playerIndex)
 }
 
+type playerVotePick struct {
+	playerIndex int
+	pickedIndex int
+}
+
 type GameVoteTurn struct {
 	*Game
-	picks           map[int]int
+	picks           []playerVotePick
 	playerIndex     int
 	initPlayerIndex int
 }
@@ -125,7 +135,6 @@ type GameVoteTurn struct {
 func newGameVoteTurn(game *Game, playerIndex int) *GameVoteTurn {
 	return &GameVoteTurn{
 		Game:            game,
-		picks:           map[int]int{},
 		playerIndex:     playerIndex,
 		initPlayerIndex: playerIndex,
 	}
@@ -135,22 +144,71 @@ func (self *GameVoteTurn) PlayerIndex() int {
 	return self.playerIndex
 }
 
-// returns false if voting has ended
-func (self *GameVoteTurn) Vote(playerIndex int) bool {
-	self.picks[self.playerIndex] = playerIndex
+// returns new game state
+func (self *GameVoteTurn) Vote(playerIndex int) (GameState, bool) {
+	self.picks = append(self.picks, playerVotePick{
+		playerIndex: self.playerIndex,
+		pickedIndex: playerIndex,
+	})
 	self.playerIndex = (self.playerIndex + 1) % len(self.players)
 
 	if self.playerIndex == self.initPlayerIndex {
-		return false
+		picks := map[int]int{}
+
+		for _, v := range self.picks {
+			picks[v.pickedIndex]++
+		}
+
+		highestCount := 0
+		pickedPlayerIndex := 0
+
+		for k, v := range picks {
+			if v > highestCount {
+				highestCount = v
+				pickedPlayerIndex = k
+			}
+		}
+
+		// if imposter was picked, crewmates won
+		if self.players[pickedPlayerIndex].Id == self.imposter.Id {
+			return newGameCrewmateWon(self.Game), true
+		}
+
+		// imposter wasn't picked, he won
+		return newGameImposterWon(self.Game), true
 	}
 
-	return true
+	return nil, false
 }
 
-func (self *GameVoteTurn) Picks() map[Player]Player {
-	picks := map[Player]Player{}
-	for k, v := range self.picks {
-		picks[self.players[k]] = self.players[v]
+func (self *GameVoteTurn) Players(selfPlayerId string) []PlayerWithIndex {
+	players := make([]PlayerWithIndex, 0, len(self.players)-1)
+	for i, v := range self.players {
+		// skip adding self as you can't vote yourself out
+		if v.Id == selfPlayerId {
+			continue
+		}
+
+		players = append(players, PlayerWithIndex{
+			Player: v,
+			Index:  i,
+		})
+	}
+	return players
+}
+
+type PlayerPick struct {
+	Player Player
+	Picked Player
+}
+
+func (self *GameVoteTurn) Picks() []PlayerPick {
+	picks := make([]PlayerPick, len(self.picks))
+	for i, v := range self.picks {
+		picks[i] = PlayerPick{
+			Player: self.players[v.playerIndex],
+			Picked: self.players[v.pickedIndex],
+		}
 	}
 	return picks
 }
@@ -176,7 +234,7 @@ func (self *GamePlayerTurn) PlayerIndex() int {
 }
 
 // records player synonym and passes turn to next
-// returns (new game state, should set)
+// returns new game state
 func (self *GamePlayerTurn) SaySynonym(synonym string) (GameState, bool) {
 	self.synonyms = append(
 		self.synonyms,

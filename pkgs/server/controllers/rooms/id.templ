@@ -55,10 +55,8 @@ templ partialGameSynonyms(state game_state.GameState) {
 	<div id="game_synonyms" class="flex flex-col gap-6">
 		<h2 class="text-4xl">Synonyms</h2>
 		<div class="flex flex-col gap-1">
-			if state != nil {
-				for _, v := range state.GetGame().Synonyms() {
-					<p>{ v.Player.Name } -> { v.Synonym }</p>
-				}
+			for _, v := range state.GetGame().Synonyms() {
+				<p>{ v.Player.Name } -> { v.Synonym }</p>
 			}
 		</div>
 	</div>
@@ -78,6 +76,8 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 						player_turn
 					case *game_state.GameImposterWon:
 						imposter_won
+					case *game_state.GameCrewmateWon:
+						crewmate_won
 				}
 			</span>
 		</h2>
@@ -177,17 +177,29 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					Imposter was { state.Imposter().Name }
 				</p>
 			case *game_state.GameVoteTurn:
-				if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
+				<div class="border border-black p-1 rounded-lg flex flex-col gap-1">
+					<p class="italic mb-1">Votes</p>
+					for _, v := range state.Picks() {
+						<p>{ v.Player.Name } -> { v.Picked.Name }</p>
+					}
+				</div>
+				if state.Game.Players()[state.PlayerIndex()].Id == selfPlayerId {
 					<p>Guess who is the imposter</p>
 					<div class="flex flex-row gap-4 flex-wrap">
-						for _, v := range state.Players() {
-							<button type="button">
+						for _, v := range state.Players(selfPlayerId) {
+							<button
+								type="button"
+								ws-send
+								hx-vals={ game_state.SerializeJsonPanic( 
+									game_state.NewActionVoteJson(v.Index),
+								) }
+							>
 								{ v.Name }
 							</button>
 						}
 					</div>
 				} else {
-					Wait for { state.Players()[state.PlayerIndex()].Name } to choose the imposter
+					Wait for { state.Game.Players()[state.PlayerIndex()].Name } to choose the imposter
 				}
 		}
 	</div>
@@ -213,15 +225,15 @@ templ partialPlayers(state game_state.GameState, selfPlayerId string) {
 	>
 		<h2 class="text-4xl">Players</h2>
 		switch state := state.(type) {
-			case *game_state.Game:
-				for _, v := range state.Players() {
-					@playerCard(v, false, selfPlayerId) {
-						{ v.Name }
-					}
-				}
 			case game_state.PlayerIndex:
 				for i, v := range state.GetGame().Players() {
 					@playerCard(v, state.PlayerIndex() == i, selfPlayerId) {
+						{ v.Name }
+					}
+				}
+			default:
+				for _, v := range state.GetGame().Players() {
+					@playerCard(v, false, selfPlayerId) {
 						{ v.Name }
 					}
 				}

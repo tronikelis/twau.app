@@ -214,6 +214,26 @@ func wsId(ctx req.ReqContext) error {
 			}); err != nil {
 				return err
 			}
+		case game_state.ActionVote:
+			var action game_state.ActionVoteJson
+			if err := json.Unmarshal(bytes, &action); err != nil {
+				return err
+			}
+
+			if err := room.StateRef(func(state *game_state.GameState) error {
+				game := (*state).(*game_state.GameVoteTurn)
+
+				if !game_state.CheckSamePlayer(game, playerId.Value) {
+					return req.ErrNotYourTurn
+				}
+
+				if newState, ok := game.Vote(action.PlayerIndex); ok {
+					*state = newState
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
 		default:
 			return req.ErrUnknownAction
 		}
