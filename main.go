@@ -81,6 +81,5 @@ func main() {
 	}()
 
 	log.Println("listening on", env.Port)
-
-	panic(<-errChan)
+	log.Fatal(<-errChan)
 }
