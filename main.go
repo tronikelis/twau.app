@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 
 	"word-amongus-game/pkgs/game_state"
 	"word-amongus-game/pkgs/server/controllers"
@@ -25,7 +27,12 @@ func main() {
 		}).
 		Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
-	server.Middleware(req.MiddlewareReqContext(game_state.NewRooms()))
+	secretKeyStr := os.Getenv("SECRET_KEY")
+	if secretKeyStr == "" {
+		log.Fatal("empty SECRET_KEY")
+	}
+
+	server.Middleware(req.MiddlewareReqContext(game_state.NewRooms(), []byte(secretKeyStr)))
 
 	controllers.Register(server)
 

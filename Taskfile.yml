@@ -29,3 +29,4 @@ tasks:
       --misc.clean_on_exit true
     env:
       PORT: 3000
+      SECRET_KEY: secret

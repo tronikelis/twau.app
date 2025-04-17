@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"word-amongus-game/pkgs/auth"
 	"word-amongus-game/pkgs/game_state"
 	"word-amongus-game/pkgs/server/req"
 )
@@ -11,12 +12,7 @@ import (
 func postIndex(ctx req.ReqContext) error {
 	playerName := ctx.Req().PostFormValue("player_name")
 
-	playerId, err := game_state.RandomHex()
-	if err != nil {
-		return err
-	}
-
-	roomId, err := game_state.RandomHex()
+	roomId, err := auth.RandomHex(auth.LengthRoomId)
 	if err != nil {
 		return err
 	}
@@ -26,13 +22,28 @@ func postIndex(ctx req.ReqContext) error {
 		return req.ErrRoomExists
 	}
 
+	playerCookies, err := req.GetPlayerCookies(ctx.Req(), ctx.SecretKey)
+	switch err {
+	case http.ErrNoCookie:
+		playerCookies, err = req.NewPlayerCookies(playerName, ctx.SecretKey)
+		if err != nil {
+			return err
+		}
+
+		http.SetCookie(ctx.Writer(), playerCookies.Id)
+		http.SetCookie(ctx.Writer(), playerCookies.Name)
+	case nil:
+	default:
+		return err
+	}
+
 	err = state.State(func(state game_state.GameState) error {
 		game, ok := state.(*game_state.Game)
 		if !ok {
 			return fmt.Errorf("expected *game_state.Game, got %T", state)
 		}
 
-		game.AddPlayer(game_state.NewPlayer(playerId, playerName))
+		game.AddPlayer(game_state.NewPlayer(playerCookies.Id.Value, playerCookies.Name.Value))
 
 		return nil
 	})
@@ -41,15 +52,6 @@ func postIndex(ctx req.ReqContext) error {
 	}
 
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))
-
-	playerIdCookie := req.CookiePlayerId
-	playerIdCookie.Value = playerId
-
-	playerNameCookie := req.CookiePlayerName
-	playerNameCookie.Value = playerName
-
-	http.SetCookie(ctx.Writer(), &playerIdCookie)
-	http.SetCookie(ctx.Writer(), &playerNameCookie)
 
 	return nil
 }

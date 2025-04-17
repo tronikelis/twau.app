@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 
+	"word-amongus-game/pkgs/auth"
 	"word-amongus-game/pkgs/game_state"
 	"word-amongus-game/pkgs/server/req"
 	"word-amongus-game/pkgs/ws"
@@ -20,7 +21,7 @@ func postId(ctx req.ReqContext) error {
 
 	playerName := ctx.Req().PostFormValue("player_name")
 
-	playerId, err := game_state.RandomHex()
+	playerId, err := auth.RandomHex(auth.LengthPlayerId)
 	if err != nil {
 		return err
 	}
@@ -28,6 +29,21 @@ func postId(ctx req.ReqContext) error {
 	room, ok := ctx.Rooms.Room(roomId)
 	if !ok {
 		return req.ErrRoomDoesNotExist
+	}
+
+	playerCookies, err := req.GetPlayerCookies(ctx.Req(), ctx.SecretKey)
+	switch err {
+	case http.ErrNoCookie:
+		playerCookies, err = req.NewPlayerCookies(playerName, ctx.SecretKey)
+		if err != nil {
+			return err
+		}
+
+		http.SetCookie(ctx.Writer(), playerCookies.Id)
+		http.SetCookie(ctx.Writer(), playerCookies.Name)
+	case nil:
+	default:
+		return err
 	}
 
 	if err := room.State(func(state game_state.GameState) error {
@@ -38,15 +54,6 @@ func postId(ctx req.ReqContext) error {
 	}
 
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))
-
-	playerIdCookie := req.CookiePlayerId
-	playerIdCookie.Value = playerId
-
-	playerNameCookie := req.CookiePlayerName
-	playerNameCookie.Value = playerName
-
-	http.SetCookie(ctx.Writer(), &playerIdCookie)
-	http.SetCookie(ctx.Writer(), &playerNameCookie)
 
 	return nil
 }
@@ -79,12 +86,7 @@ func wsId(ctx req.ReqContext) error {
 		return req.ErrRoomDoesNotExist
 	}
 
-	playerId, err := ctx.Req().Cookie(req.CookiePlayerId.Name)
-	if err != nil {
-		return err
-	}
-
-	playerName, err := ctx.Req().Cookie(req.CookiePlayerName.Name)
+	playerCookies, err := req.GetPlayerCookies(ctx.Req(), ctx.SecretKey)
 	if err != nil {
 		return err
 	}
@@ -100,7 +102,7 @@ func wsId(ctx req.ReqContext) error {
 	}
 
 	if err := room.State(func(state game_state.GameState) error {
-		state.GetGame().AddPlayer(game_state.NewPlayer(playerId.Value, playerName.Value))
+		state.GetGame().AddPlayer(game_state.NewPlayer(playerCookies.Id.Value, playerCookies.Name.Value))
 		return nil
 	}); err != nil {
 		return err
@@ -108,7 +110,7 @@ func wsId(ctx req.ReqContext) error {
 	defer room.State(func(state game_state.GameState) error { // 3. sync changes to others
 		// this does not remove a player if it is not the start of the game
 		if game, ok := state.(*game_state.Game); ok {
-			game.RemovePlayer(playerId.Value)
+			game.RemovePlayer(playerCookies.Id.Value)
 		}
 
 		// todo: this deletes the room if 1 user refreshes, not really good experience
@@ -124,7 +126,7 @@ func wsId(ctx req.ReqContext) error {
 		return nil
 	})
 
-	room.WsRoom().Add(socket, playerId.Value)
+	room.WsRoom().Add(socket, playerCookies.Id.Value)
 	defer room.WsRoom().Delete(socket) // 2. remove from ws room
 	defer socket.Close()               // 1. close the ws conn
 
@@ -166,7 +168,7 @@ func wsId(ctx req.ReqContext) error {
 			if err := room.StateRef(func(state *game_state.GameState) error {
 				game := (*state).(*game_state.GamePlayerChooseWord)
 
-				if !game_state.CheckSamePlayer(game, playerId.Value) {
+				if !game_state.CheckSamePlayer(game, playerCookies.Id.Value) {
 					return req.ErrNotYourTurn
 				}
 
@@ -184,7 +186,7 @@ func wsId(ctx req.ReqContext) error {
 			if err := room.StateRef(func(state *game_state.GameState) error {
 				game := (*state).(*game_state.GamePlayerTurn)
 
-				if !game_state.CheckSamePlayer(game, playerId.Value) {
+				if !game_state.CheckSamePlayer(game, playerCookies.Id.Value) {
 					return req.ErrNotYourTurn
 				}
 
@@ -205,7 +207,7 @@ func wsId(ctx req.ReqContext) error {
 			if err := room.StateRef(func(state *game_state.GameState) error {
 				game := (*state).(*game_state.GamePlayerTurn)
 
-				if !game_state.CheckSamePlayer(game, playerId.Value) {
+				if !game_state.CheckSamePlayer(game, playerCookies.Id.Value) {
 					return req.ErrNotYourTurn
 				}
 
@@ -223,7 +225,7 @@ func wsId(ctx req.ReqContext) error {
 			if err := room.StateRef(func(state *game_state.GameState) error {
 				game := (*state).(*game_state.GameVoteTurn)
 
-				if !game_state.CheckSamePlayer(game, playerId.Value) {
+				if !game_state.CheckSamePlayer(game, playerCookies.Id.Value) {
 					return req.ErrNotYourTurn
 				}
 
