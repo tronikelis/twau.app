@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 
-	"word-amongus-game/pkgs/auth"
 	"word-amongus-game/pkgs/game_state"
 	"word-amongus-game/pkgs/server/req"
 	"word-amongus-game/pkgs/ws"
@@ -21,12 +20,7 @@ func postId(ctx req.ReqContext) error {
 
 	playerName := ctx.Req().PostFormValue("player_name")
 
-	playerId, err := auth.RandomHex(auth.LengthPlayerId)
-	if err != nil {
-		return err
-	}
-
-	room, ok := ctx.Rooms.Room(roomId)
+	_, ok := ctx.Rooms.Room(roomId)
 	if !ok {
 		return req.ErrRoomDoesNotExist
 	}
@@ -40,13 +34,6 @@ func postId(ctx req.ReqContext) error {
 
 		http.SetCookie(ctx.Writer(), playerCookies.Id)
 		http.SetCookie(ctx.Writer(), playerCookies.Name)
-	}
-
-	if err := room.State(func(state game_state.GameState) error {
-		state.GetGame().AddPlayer(game_state.NewPlayer(playerId, playerName))
-		return nil
-	}); err != nil {
-		return err
 	}
 
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))
