@@ -23,8 +23,7 @@ func postIndex(ctx req.ReqContext) error {
 	}
 
 	playerCookies, err := req.GetPlayerCookies(ctx.Req(), ctx.SecretKey)
-	switch err {
-	case http.ErrNoCookie:
+	if err != nil {
 		playerCookies, err = req.NewPlayerCookies(playerName, ctx.SecretKey)
 		if err != nil {
 			return err
@@ -32,9 +31,6 @@ func postIndex(ctx req.ReqContext) error {
 
 		http.SetCookie(ctx.Writer(), playerCookies.Id)
 		http.SetCookie(ctx.Writer(), playerCookies.Name)
-	case nil:
-	default:
-		return err
 	}
 
 	err = state.State(func(state game_state.GameState) error {
