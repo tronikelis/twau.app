@@ -261,7 +261,7 @@ func newGamePlayerChooseWord(game *Game, imposterIndex int) *GamePlayerChooseWor
 
 	return &GamePlayerChooseWord{
 		Game:        game,
-		fromWords:   allWords.RandomN(4),
+		fromWords:   allWords.randomN(4),
 		playerIndex: playerIndex,
 	}
 }
