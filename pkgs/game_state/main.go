@@ -49,7 +49,7 @@ type Game struct {
 	synonyms []PlayerSynonym
 	players  []Player
 	// ඞ
-	imposter Player
+	imposterIndex int
 }
 
 func NewGame() *Game {
@@ -61,7 +61,7 @@ func (self *Game) Word() string {
 }
 
 func (self *Game) Imposter() Player {
-	return self.imposter
+	return self.players[self.imposterIndex]
 }
 
 func (self *Game) Synonyms() []PlayerSynonym {
@@ -95,16 +95,15 @@ func (self *Game) GetGame() *Game {
 func (self *Game) Reset() {
 	self.word = ""
 	self.synonyms = nil
-	self.imposter = Player{}
+	self.imposterIndex = 0
 }
 
 func (self *Game) Start() *GamePlayerChooseWord {
 	self.Reset()
 
-	imposterIndex := rand.IntN(len(self.players))
-	self.imposter = self.players[imposterIndex]
+	self.imposterIndex = rand.IntN(len(self.players))
 
-	return newGamePlayerChooseWord(self, imposterIndex)
+	return newGamePlayerChooseWord(self, self.imposterIndex)
 }
 
 // idempotent
@@ -170,7 +169,7 @@ func (self *GameVoteTurn) Vote(playerIndex int) (GameState, bool) {
 		}
 
 		// if imposter was picked, crewmates won
-		if self.players[pickedPlayerIndex].Id == self.imposter.Id {
+		if self.players[pickedPlayerIndex].Id == self.players[self.imposterIndex].Id {
 			return newGameCrewmateWon(self.Game), true
 		}
 
@@ -241,7 +240,8 @@ func (self *GamePlayerTurn) SaySynonym(synonym string) (GameState, bool) {
 		newPlayerSynonym(synonym, self.players[self.playerIndex]),
 	)
 
-	if synonym == self.word && self.players[self.playerIndex].Id == self.imposter.Id {
+	// imposter could have won by saying the same word
+	if synonym == self.word && self.players[self.playerIndex].Id == self.players[self.imposterIndex].Id {
 		return newGameImposterWon(self.Game), true
 	}
 
