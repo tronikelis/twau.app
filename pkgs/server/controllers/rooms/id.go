@@ -148,7 +148,7 @@ func wsId(ctx req.ReqContext) error {
 		}
 
 		switch action.Action {
-		case game_state.ActionStartGame:
+		case game_state.ActionStart:
 			if err := room.StateRef(func(state *game_state.GameState) error {
 				game := (*state).(*game_state.Game)
 				*state = game.Start()
@@ -197,11 +197,6 @@ func wsId(ctx req.ReqContext) error {
 				return err
 			}
 		case game_state.ActionInitVote:
-			var action game_state.ActionInitVoteJson
-			if err := json.Unmarshal(bytes, &action); err != nil {
-				return err
-			}
-
 			if err := room.StateRef(func(state *game_state.GameState) error {
 				game := (*state).(*game_state.GamePlayerTurn)
 
@@ -230,6 +225,14 @@ func wsId(ctx req.ReqContext) error {
 				if newState, ok := game.Vote(action.PlayerIndex); ok {
 					*state = newState
 				}
+				return nil
+			}); err != nil {
+				return err
+			}
+		case game_state.ActionRestart:
+			if err := room.StateRef(func(state *game_state.GameState) error {
+				game := (*state).GetGame()
+				*state = game.Start()
 				return nil
 			}); err != nil {
 				return err

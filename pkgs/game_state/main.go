@@ -92,14 +92,10 @@ func (self *Game) GetGame() *Game {
 	return self
 }
 
-func (self *Game) Reset() {
+func (self *Game) Start() *GamePlayerChooseWord {
+	// clean garbanzo
 	self.word = ""
 	self.synonyms = nil
-	self.imposterIndex = 0
-}
-
-func (self *Game) Start() *GamePlayerChooseWord {
-	self.Reset()
 
 	self.imposterIndex = rand.IntN(len(self.players))
 

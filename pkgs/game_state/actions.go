@@ -3,11 +3,12 @@ package game_state
 import "encoding/json"
 
 const (
-	ActionStartGame = iota
+	ActionStart = iota
 	ActionPlayerChooseWord
 	ActionPlayerSaySynonym
 	ActionInitVote
 	ActionVote
+	ActionRestart
 )
 
 type Action struct {
@@ -22,13 +23,13 @@ func SerializeJsonPanic(value any) string {
 	return string(str)
 }
 
-type ActionStartGameJson struct {
+type ActionStartJson struct {
 	Action
 }
 
-func NewActionStartGameJson() ActionStartGameJson {
-	return ActionStartGameJson{
-		Action: Action{ActionStartGame},
+func NewActionStartJson() ActionStartJson {
+	return ActionStartJson{
+		Action: Action{ActionStart},
 	}
 }
 
@@ -75,5 +76,15 @@ func NewActionVoteJson(playerIndex int) ActionVoteJson {
 	return ActionVoteJson{
 		Action:      Action{ActionVote},
 		PlayerIndex: playerIndex,
+	}
+}
+
+type ActionRestartJson struct {
+	Action
+}
+
+func NewActionRestartJson() ActionRestartJson {
+	return ActionRestartJson{
+		Action: Action{ActionRestart},
 	}
 }

@@ -112,7 +112,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					type="button"
 					ws-send
 					hx-vals={ game_state.SerializeJsonPanic(
-						game_state.NewActionStartGameJson(),
+						game_state.NewActionStartJson(),
 					) }
 				>
 					Start game
@@ -176,6 +176,31 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				<p>
 					Imposter was { state.Imposter().Name }
 				</p>
+				<button
+					type="button"
+					ws-send
+					hx-vals={ game_state.SerializeJsonPanic(
+						game_state.NewActionRestartJson(),
+					) }
+				>
+					Restart game?
+				</button>
+			case *game_state.GameCrewmateWon:
+				<p>
+					GG, crewmates won
+				</p>
+				<p>
+					Imposter was { state.Imposter().Name }
+				</p>
+				<button
+					type="button"
+					ws-send
+					hx-vals={ game_state.SerializeJsonPanic(
+						game_state.NewActionRestartJson(),
+					) }
+				>
+					Restart game?
+				</button>
 			case *game_state.GameVoteTurn:
 				<div class="border border-black p-1 rounded-lg flex flex-col gap-1">
 					<p class="italic mb-1">Votes</p>
