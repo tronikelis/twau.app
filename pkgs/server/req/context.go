@@ -11,14 +11,16 @@ import (
 
 type ReqContext struct {
 	maruchi.ReqContext
-	Rooms game_state.Rooms
+	Rooms     game_state.Rooms
+	SecretKey []byte
 }
 
-func MiddlewareReqContext(rooms game_state.Rooms) maruchi.Middleware {
+func MiddlewareReqContext(rooms game_state.Rooms, secretKey []byte) maruchi.Middleware {
 	return func(ctx maruchi.ReqContext, next maruchi.Handler) {
 		next(ReqContext{
 			ReqContext: ctx,
 			Rooms:      rooms,
+			SecretKey:  secretKey,
 		})
 	}
 }
