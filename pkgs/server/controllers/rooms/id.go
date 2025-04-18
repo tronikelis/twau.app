@@ -154,7 +154,7 @@ func wsId(ctx req.ReqContext) error {
 			if err := room.StateRef(func(state *game_state.GameState) error {
 				game := (*state).(*game_state.GamePlayerChooseWord)
 
-				if !game_state.CheckSamePlayer(game, playerCookies.Id.Value) {
+				if !game_state.CheckSamePlayer(game, game.PlayerIndex2(), playerCookies.Id.Value) {
 					return req.ErrNotYourTurn
 				}
 
@@ -172,7 +172,7 @@ func wsId(ctx req.ReqContext) error {
 			if err := room.StateRef(func(state *game_state.GameState) error {
 				game := (*state).(*game_state.GamePlayerTurn)
 
-				if !game_state.CheckSamePlayer(game, playerCookies.Id.Value) {
+				if !game_state.CheckSamePlayer(game, game.PlayerIndex(), playerCookies.Id.Value) {
 					return req.ErrNotYourTurn
 				}
 
@@ -188,7 +188,7 @@ func wsId(ctx req.ReqContext) error {
 			if err := room.StateRef(func(state *game_state.GameState) error {
 				game := (*state).(*game_state.GamePlayerTurn)
 
-				if !game_state.CheckSamePlayer(game, playerCookies.Id.Value) {
+				if !game_state.CheckSamePlayer(game, game.PlayerIndex(), playerCookies.Id.Value) {
 					return req.ErrNotYourTurn
 				}
 
@@ -206,7 +206,7 @@ func wsId(ctx req.ReqContext) error {
 			if err := room.StateRef(func(state *game_state.GameState) error {
 				game := (*state).(*game_state.GameVoteTurn)
 
-				if !game_state.CheckSamePlayer(game, playerCookies.Id.Value) {
+				if !game_state.CheckSamePlayer(game, game.PlayerIndex(), playerCookies.Id.Value) {
 					return req.ErrNotYourTurn
 				}
 

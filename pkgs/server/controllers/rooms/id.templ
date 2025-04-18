@@ -114,7 +114,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					Word:
 					<span class="text-muted italic">
 						if state.GetGame().Imposter().Id == selfPlayerId {
-							???
+							[REDACTED]
 						} else {
 							{ state.GetGame().Word() }
 						}
@@ -135,7 +135,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					Start game
 				</button>
 			case *game_state.GamePlayerChooseWord:
-				if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
+				if state.Players()[state.PlayerIndex2()].Id == selfPlayerId {
 					for i, v := range state.FromWords() {
 						<button
 							class="w-full"
@@ -150,8 +150,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					}
 				} else {
 					<p>
-						Wait for slow ass { state.Players()[state.PlayerIndex()].Name }
-						to choose his word
+						Wait for [REDACTED] to choose a word
 					</p>
 				}
 			case *game_state.GamePlayerTurn:
@@ -224,6 +223,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				</button>
 			case *game_state.GameVoteTurn:
 				<h3>Votes</h3>
+				<h4>Initialized by { state.GetGame().Players()[state.PlayerIndex()].Name }</h4>
 				<div class="flex flex-row flex-wrap gap-4 *:flex-1 *:min-w-24">
 					for _, v := range state.Picks() {
 						<div class="border p-2 flex flex-col gap-1">

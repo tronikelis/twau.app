@@ -14,8 +14,8 @@ type PlayerIndex interface {
 	PlayerIndex() int
 }
 
-func CheckSamePlayer(playerIndex PlayerIndex, playerId string) bool {
-	return playerIndex.GetGame().Players()[playerIndex.PlayerIndex()].Id == playerId
+func CheckSamePlayer(game GameState, playerIndex int, playerId string) bool {
+	return game.GetGame().Players()[playerIndex].Id == playerId
 }
 
 type PlayerWithIndex struct {
@@ -135,10 +135,6 @@ func (self *Game) AddPlayer(player Player) {
 	}
 
 	self.players = append(self.players, player)
-}
-
-func (self *Game) PlayerTurn(playerIndex int) *GamePlayerTurn {
-	return newGamePlayerTurn(self, playerIndex)
 }
 
 type playerVotePick struct {
@@ -305,7 +301,7 @@ func (self *GamePlayerChooseWord) FromWords() []string {
 	return self.fromWords
 }
 
-func (self *GamePlayerChooseWord) PlayerIndex() int {
+func (self *GamePlayerChooseWord) PlayerIndex2() int {
 	return self.playerIndex
 }
 
@@ -315,7 +311,8 @@ func (self *GamePlayerChooseWord) Choose(index int) *GamePlayerTurn {
 	}
 
 	self.word = self.fromWords[index]
-	return self.PlayerTurn(self.playerIndex)
+	playerIndex := rand.IntN(len(self.players))
+	return newGamePlayerTurn(self.Game, playerIndex)
 }
 
 type GameCrewmateWon struct {
