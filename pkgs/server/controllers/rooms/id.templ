@@ -56,7 +56,10 @@ templ partialSynonyms(state game_state.GameState) {
 		<h2>Synonyms</h2>
 		<div class="relative h-full min-h-80">
 			<div class="absolute inset-0 size-full flex flex-col-reverse gap-4 border border-dashed p-4 overflow-auto">
-				for _, v := range state.GetGame().Synonyms() {
+				for i := len(state.GetGame().Synonyms())-1; i >= 0; i-- {
+					{{
+						v := state.GetGame().Synonyms()[i]
+					}}
 					<div class="flex flex-col gap-1">
 						<p class="font-bold">
 							{ state.GetGame().Players()[v.PlayerIndex].Name }:
