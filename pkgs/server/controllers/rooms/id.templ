@@ -281,7 +281,7 @@ templ playerCard(player game_state.Player, turn bool, index int, selfPlayerId st
 				<span class="text-danger">offline</span>
 			}
 		</p>
-		<p class="text-muted">{ fmt.Sprint(index) }</p>
+		<p class="text-muted">{ fmt.Sprintf("#%d", index) }</p>
 	</div>
 }
 

@@ -36,9 +36,7 @@ var allWords words = words{
 	"sun",
 	"tree",
 	"umbrella",
-	"violin",
 	"whale",
-	"xylophone",
 	"yacht",
 	"zebra",
 }
