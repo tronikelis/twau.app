@@ -89,6 +89,8 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 							Imposter won
 						case *game_state.GameCrewmateWon:
 							Crewmates won
+						case *game_state.GameVoteTurn:
+							Player voting
 					}
 				</span>
 			</p>
