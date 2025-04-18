@@ -24,12 +24,13 @@ type PlayerWithIndex struct {
 }
 
 type Player struct {
-	Id   string
-	Name string
+	Id     string
+	Name   string
+	Online bool
 }
 
 func NewPlayer(id string, name string) Player {
-	return Player{Id: id, Name: name}
+	return Player{Id: id, Name: name, Online: true}
 }
 
 type PlayerSynonym struct {
@@ -74,11 +75,27 @@ func (self *Game) Synonyms() []PlayerSynonym {
 	return self.synonyms
 }
 
-func (self *Game) RemovePlayer(id string) {
-	if self.players == nil {
-		return
+func (self *Game) DisconnectPlayer(id string) {
+	for i, v := range self.players {
+		if v.Id == id {
+			v.Online = false
+			self.players[i] = v
+			break
+		}
 	}
+}
 
+func (self *Game) PlayersOnline() int {
+	count := 0
+	for _, v := range self.players {
+		if v.Online {
+			count++
+		}
+	}
+	return count
+}
+
+func (self *Game) RemovePlayer(id string) {
 	self.players = slices.DeleteFunc(self.players, func(player Player) bool {
 		return player.Id == id
 	})

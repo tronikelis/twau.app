@@ -93,13 +93,15 @@ func wsId(ctx req.ReqContext) error {
 		return err
 	}
 	defer room.State(func(state game_state.GameState) error { // 3. sync changes to others
-		// this does not remove a player if it is not the start of the game
 		if game, ok := state.(*game_state.Game); ok {
 			game.RemovePlayer(playerCookies.Id.Value)
+		} else {
+			state.GetGame().DisconnectPlayer(playerCookies.Id.Value)
 		}
 
-		if len(state.GetGame().Players()) == 0 {
+		if state.GetGame().PlayersOnline() == 0 {
 			ctx.Rooms.DeleteRoom(roomId)
+			log.Println("deleting room", roomId)
 			return nil
 		}
 

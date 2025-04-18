@@ -242,7 +242,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					}
 				</div>
 				if state.Game.Players()[state.PlayerIndex()].Id == selfPlayerId {
-					<h4 class="mt-2">Guess who is the imposter</h4>
+					<h4 class="mt-2">Who is the imposter?</h4>
 					<div class="flex flex-row gap-4 flex-wrap">
 						for _, v := range state.Players(selfPlayerId) {
 							<button
@@ -274,7 +274,14 @@ templ playerCard(player game_state.Player, turn bool, index int, selfPlayerId st
 				YOU
 			</p>
 		}
-		<p class="ml-auto text-muted">{ fmt.Sprint(index) }</p>
+		<p class="ml-auto">
+			if player.Online {
+				<span class="text-success">online</span>
+			} else {
+				<span class="text-danger">offline</span>
+			}
+		</p>
+		<p class="text-muted">{ fmt.Sprint(index) }</p>
 	</div>
 }
 
