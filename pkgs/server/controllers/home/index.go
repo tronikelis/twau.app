@@ -5,5 +5,11 @@ import (
 )
 
 func getIndex(ctx req.ReqContext) error {
-	return pageIndex().Render(ctx.Context(), ctx.Writer())
+	var playerName string
+	playerNameCookie, err := ctx.Req().Cookie(req.CookiePlayerName.Name)
+	if err == nil {
+		playerName = playerNameCookie.Value
+	}
+
+	return pageIndex(playerName).Render(ctx.Context(), ctx.Writer())
 }

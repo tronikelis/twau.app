@@ -33,14 +33,14 @@ func NewPlayer(id string, name string) Player {
 }
 
 type PlayerSynonym struct {
-	Synonym string
-	Player  Player
+	Synonym     string
+	PlayerIndex int
 }
 
-func newPlayerSynonym(synonym string, player Player) PlayerSynonym {
+func newPlayerSynonym(synonym string, playerIndex int) PlayerSynonym {
 	return PlayerSynonym{
-		Synonym: synonym,
-		Player:  player,
+		Synonym:     synonym,
+		PlayerIndex: playerIndex,
 	}
 }
 
@@ -53,7 +53,9 @@ type Game struct {
 }
 
 func NewGame() *Game {
-	return &Game{}
+	return &Game{
+		imposterIndex: -1,
+	}
 }
 
 func (self *Game) Word() string {
@@ -61,6 +63,10 @@ func (self *Game) Word() string {
 }
 
 func (self *Game) Imposter() Player {
+	if self.imposterIndex == -1 {
+		return Player{}
+	}
+
 	return self.players[self.imposterIndex]
 }
 
@@ -193,18 +199,27 @@ func (self *GameVoteTurn) Players(selfPlayerId string) []PlayerWithIndex {
 }
 
 type PlayerPicked struct {
-	Player Player
-	Picked Player
+	Player   Player
+	PickedBy []Player
 }
 
 func (self *GameVoteTurn) Picks() []PlayerPicked {
-	picks := make([]PlayerPicked, len(self.picks))
-	for i, v := range self.picks {
-		picks[i] = PlayerPicked{
-			Player: self.players[v.playerIndex],
-			Picked: self.players[v.pickedIndex],
-		}
+	picks := make([]PlayerPicked, len(self.players))
+	for i, v := range picks {
+		v.Player = self.players[i]
+		picks[i] = v
 	}
+
+	for _, v := range self.picks {
+		prev := picks[v.pickedIndex]
+		prev.PickedBy = append(prev.PickedBy, self.players[v.playerIndex])
+		picks[v.pickedIndex] = prev
+	}
+
+	slices.SortFunc(picks, func(a PlayerPicked, b PlayerPicked) int {
+		return len(b.PickedBy) - len(a.PickedBy)
+	})
+
 	return picks
 }
 
@@ -233,7 +248,7 @@ func (self *GamePlayerTurn) PlayerIndex() int {
 func (self *GamePlayerTurn) SaySynonym(synonym string) (GameState, bool) {
 	self.synonyms = append(
 		self.synonyms,
-		newPlayerSynonym(synonym, self.players[self.playerIndex]),
+		newPlayerSynonym(synonym, self.playerIndex),
 	)
 
 	// imposter could have won by saying the same word

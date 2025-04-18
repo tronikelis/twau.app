@@ -2,17 +2,30 @@ package home
 
 import "word-amongus-game/pkgs/ui"
 
-templ pageIndex() {
+templ pageIndex(playerName string) {
 	@ui.Page() {
-		<form
-			hx-post="/rooms"
-			hx-swap="none"
-		>
-			<label>
-				Your Name
-				<input type="text" name="player_name" placeholder="Amongus HAHAHAHHA ඞ"/>
-			</label>
-			<button type="submit">Create room</button>
-		</form>
+		<div class="container flex flex-row justify-center">
+			<form
+				hx-post="/rooms"
+				hx-swap="none"
+				class="flex flex-col"
+			>
+				<h1>The Word Among Us</h1>
+				<div class="flex flex-col">
+					if playerName == "" {
+						<div class="form-group">
+							<label>Your Name *</label>
+							<input class="input-block" type="text" name="player_name" placeholder="CoolPlayer227" required/>
+						</div>
+					} else {
+						<h4>Your name is: <span class="italic font-bold">{ playerName }</span></h4>
+					}
+					<div class="flex flex-row justify-end">
+						<button type="submit">Create room</button>
+					</div>
+					<hr/>
+				</div>
+			</form>
+		</div>
 	}
 }

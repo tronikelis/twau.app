@@ -12,7 +12,7 @@ templ pagePlayerCreate(roomId string) {
 			hx-post={ ui.StringURL(fmt.Sprintf("/rooms/%s", roomId)) }
 			class="flex flex-row items-center gap-2"
 		>
-			<input type="text" name="player_name" placeholder="Your name"/>
+			<input type="text" name="player_name" placeholder="Your name" required/>
 			<button type="submit">
 				Join
 			</button>
@@ -23,7 +23,7 @@ templ pagePlayerCreate(roomId string) {
 templ pageRoomId(roomId string) {
 	@ui.Page() {
 		<div class="flex flex-col gap-0">
-			<h1 class="text-5xl text-center">ඞ SUSSY AMONGUS MONGUS WORD GAME ඞ</h1>
+			<h3 class="m-2 truncate">The Word Among Us • <span class="text-muted">{ roomId }</span></h3>
 			<div
 				class="w-full p-12"
 				hx-ext="ws"
@@ -36,80 +36,94 @@ templ pageRoomId(roomId string) {
 }
 
 templ partialGameState(state game_state.GameState, selfPlayerId string) {
-	<div id="game_state" class="grid grid-cols-12 gap-16" hx-swap-oob="outerHTML">
+	<div id="game_state" class="grid grid-cols-6 gap-8" hx-swap-oob="outerHTML">
 		if state != nil {
-			<div class="col-span-3">
-				@partialPlayers(state, selfPlayerId)
+			<div class="col-span-6 lg:col-span-4">
+				<div class="flex flex-col gap-8">
+					@partialPlayers(state, selfPlayerId)
+					@partialPlayerAction(state, selfPlayerId)
+				</div>
 			</div>
-			<div class="col-span-6">
-				@partialPlayerAction(state, selfPlayerId)
-			</div>
-			<div class="col-span-3">
-				@partialGameSynonyms(state)
+			<div class="col-span-6 lg:col-span-2">
+				@partialSynonyms(state)
 			</div>
 		}
 	</div>
 }
 
-templ partialGameSynonyms(state game_state.GameState) {
-	<div id="game_synonyms" class="flex flex-col gap-6">
-		<h2 class="text-4xl">Synonyms</h2>
-		<div class="flex flex-col gap-1">
-			for _, v := range state.GetGame().Synonyms() {
-				<p>{ v.Player.Name } -> { v.Synonym }</p>
-			}
+templ partialSynonyms(state game_state.GameState) {
+	<div class="flex flex-col gap-4 h-full">
+		<h2>Synonyms</h2>
+		<div class="relative h-full min-h-80">
+			<div class="absolute inset-0 size-full flex flex-col-reverse gap-4 border border-dashed p-4 overflow-auto">
+				for _, v := range state.GetGame().Synonyms() {
+					<div class="flex flex-col gap-1">
+						<p class="font-bold">
+							{ state.GetGame().Players()[v.PlayerIndex].Name }:
+						</p>
+						<p>
+							{ v.Synonym }
+						</p>
+					</div>
+				}
+			</div>
 		</div>
 	</div>
 }
 
 templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
-	<div id="player_action" class="flex flex-col gap-6">
-		<h2 class="text-4xl">
-			State:
-			<span class="italic">
-				switch state.(type) {
-					case *game_state.Game:
-						game
-					case *game_state.GamePlayerChooseWord:
-						player_choose_word
-					case *game_state.GamePlayerTurn:
-						player_turn
-					case *game_state.GameImposterWon:
-						imposter_won
-					case *game_state.GameCrewmateWon:
-						crewmate_won
-				}
-			</span>
-		</h2>
-		if state.GetGame().Imposter().Id != "" {
-			<h3 class="text-3xl">
-				Your role: 
-				<span class="italic">
-					if state.GetGame().Imposter().Id == selfPlayerId {
-						Imposter
-					} else {
-						Crewmate
+	<div class="flex flex-col gap-4">
+		<h2>Game</h2>
+		<div class="flex flex-col gap-2">
+			<p>
+				State:
+				<span class="text-muted italic">
+					switch state.(type) {
+						case *game_state.Game:
+							Pre game
+						case *game_state.GamePlayerChooseWord:
+							Player choosing word
+						case *game_state.GamePlayerTurn:
+							Player turn
+						case *game_state.GameImposterWon:
+							Imposter won
+						case *game_state.GameCrewmateWon:
+							Crewmates won
+						case *game_state.GameVoteTurn:
+							Player voting
 					}
 				</span>
-			</h3>
-		}
-		if state.GetGame().Word() != "" {
-			<h4 class="text-2xl">
-				The word is:
-				<span class="italic">
-					if state.GetGame().Imposter().Id == selfPlayerId {
-						???
-					} else {
-						{ state.GetGame().Word() }
-					}
-				</span>
-			</h4>
-		}
-		<hr class="my-4"/>
+			</p>
+			if state.GetGame().Imposter().Id != "" {
+				<p>
+					Role:
+					<span class="text-muted italic">
+						if state.GetGame().Imposter().Id == selfPlayerId {
+							Imposter
+						} else {
+							Crewmate
+						}
+					</span>
+				</p>
+			}
+			if state.GetGame().Word() != "" {
+				<p>
+					Word:
+					<span class="text-muted italic">
+						if state.GetGame().Imposter().Id == selfPlayerId {
+							???
+						} else {
+							{ state.GetGame().Word() }
+						}
+					</span>
+				</p>
+			}
+		</div>
 		switch state := state.(type) {
 			case *game_state.Game:
 				<button
 					type="button"
+					class="w-full"
 					ws-send
 					hx-vals={ game_state.SerializeJsonPanic(
 						game_state.NewActionStartJson(),
@@ -121,6 +135,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
 					for i, v := range state.FromWords() {
 						<button
+							class="w-full"
 							type="button"
 							ws-send
 							hx-vals={ game_state.SerializeJsonPanic(
@@ -139,30 +154,33 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 			case *game_state.GamePlayerTurn:
 				if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
 					<p>It's your turn, what do you want to do?</p>
-					<form class="flex flex-row gap-2 items-center">
-						<input type="text" name="synonym" placeholder="Synonym:"/>
+					<div class="flex flex-col gap-8">
+						<form class="flex flex-row gap-2 items-center">
+							<input class="flex-1" type="text" name="synonym" placeholder="Synonym:" required/>
+							<button
+								type="submit"
+								ws-send
+								hx-vals={ game_state.SerializeJsonPanic(
+									game_state.NewActionPlayerSaySynonymJson(),
+								) }
+								hx-include="previous"
+								hx-disabled-elt="this"
+							>
+								Say synonym
+							</button>
+						</form>
 						<button
-							type="submit"
+							class="w-full"
+							type="button"
 							ws-send
 							hx-vals={ game_state.SerializeJsonPanic(
-								game_state.NewActionPlayerSaySynonymJson(),
+								game_state.NewActionInitVoteJson(),
 							) }
-							hx-include="previous"
 							hx-disabled-elt="this"
 						>
-							Say synonym
+							Initialize vote
 						</button>
-					</form>
-					<button
-						type="button"
-						ws-send
-						hx-vals={ game_state.SerializeJsonPanic(
-							game_state.NewActionInitVoteJson(),
-						) }
-						hx-disabled-elt="this"
-					>
-						Initialize vote
-					</button>
+					</div>
 				} else {
 					<p>
 						Wait for { state.Players()[state.PlayerIndex()].Name } to 
@@ -177,6 +195,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					Imposter was { state.Imposter().Name }
 				</p>
 				<button
+					class="w-full"
 					type="button"
 					ws-send
 					hx-vals={ game_state.SerializeJsonPanic(
@@ -193,6 +212,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					Imposter was { state.Imposter().Name }
 				</p>
 				<button
+					class="w-full"
 					type="button"
 					ws-send
 					hx-vals={ game_state.SerializeJsonPanic(
@@ -202,17 +222,30 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					Restart game?
 				</button>
 			case *game_state.GameVoteTurn:
-				<div class="border border-black p-1 rounded-lg flex flex-col gap-1">
-					<p class="italic mb-1">Votes</p>
+				<h3>Votes</h3>
+				<div class="flex flex-row flex-wrap gap-4 *:flex-1 *:min-w-24">
 					for _, v := range state.Picks() {
-						<p>{ v.Player.Name } -> { v.Picked.Name }</p>
+						<div class="border p-2 flex flex-col gap-1">
+							<p class="font-bold mb-1">{ v.Player.Name }:</p>
+							<div class="flex flex-row gap-1 flex-wrap">
+								for i, x := range v.PickedBy {
+									<p class="text-muted">
+										{ x.Name }
+										if i != len(v.PickedBy)-1 {
+											{ " •" }
+										}
+									</p>
+								}
+							</div>
+						</div>
 					}
 				</div>
 				if state.Game.Players()[state.PlayerIndex()].Id == selfPlayerId {
-					<p>Guess who is the imposter</p>
+					<h4 class="mt-2">Guess who is the imposter</h4>
 					<div class="flex flex-row gap-4 flex-wrap">
 						for _, v := range state.Players(selfPlayerId) {
 							<button
+								class="w-full"
 								type="button"
 								ws-send
 								hx-vals={ game_state.SerializeJsonPanic( 
@@ -230,38 +263,38 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 	</div>
 }
 
-templ playerCard(player game_state.Player, turn bool, selfPlayerId string) {
-	<div class="p-2 shadow-xl rounded-2xl border border-gray-600">
-		<p>
-			if turn {
-				HIS TURN ->{ " " }
-			}
-			<span class={ templ.KV("font-bold text-blue-600", player.Id == selfPlayerId) }>
-				{ children... }
-			</span>
+templ playerCard(player game_state.Player, turn bool, index int, selfPlayerId string) {
+	<div class={ "border p-2 gap-2 flex flex-row items-center", templ.KV("background-primary", turn) }>
+		<p class={ "font-bold", templ.KV("text-secondary", player.Id == selfPlayerId) }>
+			{ children... }
 		</p>
+		if player.Id == selfPlayerId {
+			<p class="italic">
+				YOU
+			</p>
+		}
+		<p class="ml-auto text-muted">{ fmt.Sprint(index) }</p>
 	</div>
 }
 
 templ partialPlayers(state game_state.GameState, selfPlayerId string) {
-	<div
-		class="flex flex-col gap-6"
-		id="players"
-	>
-		<h2 class="text-4xl">Players</h2>
-		switch state := state.(type) {
-			case game_state.PlayerIndex:
-				for i, v := range state.GetGame().Players() {
-					@playerCard(v, state.PlayerIndex() == i, selfPlayerId) {
-						{ v.Name }
+	<div class="flex flex-col gap-4">
+		<h2>Players</h2>
+		<div class="flex flex-row flex-wrap items-center gap-4 *:min-w-64 *:flex-1">
+			switch state := state.(type) {
+				case game_state.PlayerIndex:
+					for i, v := range state.GetGame().Players() {
+						@playerCard(v, state.PlayerIndex() == i, i, selfPlayerId) {
+							{ v.Name }
+						}
 					}
-				}
-			default:
-				for _, v := range state.GetGame().Players() {
-					@playerCard(v, false, selfPlayerId) {
-						{ v.Name }
+				default:
+					for i, v := range state.GetGame().Players() {
+						@playerCard(v, false, i, selfPlayerId) {
+							{ v.Name }
+						}
 					}
-				}
-		}
+			}
+		</div>
 	</div>
 }
