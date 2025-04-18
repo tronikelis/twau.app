@@ -33,14 +33,14 @@ func NewPlayer(id string, name string) Player {
 }
 
 type PlayerSynonym struct {
-	Synonym string
-	Player  Player
+	Synonym     string
+	PlayerIndex int
 }
 
-func newPlayerSynonym(synonym string, player Player) PlayerSynonym {
+func newPlayerSynonym(synonym string, playerIndex int) PlayerSynonym {
 	return PlayerSynonym{
-		Synonym: synonym,
-		Player:  player,
+		Synonym:     synonym,
+		PlayerIndex: playerIndex,
 	}
 }
 
@@ -53,7 +53,9 @@ type Game struct {
 }
 
 func NewGame() *Game {
-	return &Game{}
+	return &Game{
+		imposterIndex: -1,
+	}
 }
 
 func (self *Game) Word() string {
@@ -61,6 +63,10 @@ func (self *Game) Word() string {
 }
 
 func (self *Game) Imposter() Player {
+	if self.imposterIndex == -1 {
+		return Player{}
+	}
+
 	return self.players[self.imposterIndex]
 }
 
@@ -233,7 +239,7 @@ func (self *GamePlayerTurn) PlayerIndex() int {
 func (self *GamePlayerTurn) SaySynonym(synonym string) (GameState, bool) {
 	self.synonyms = append(
 		self.synonyms,
-		newPlayerSynonym(synonym, self.players[self.playerIndex]),
+		newPlayerSynonym(synonym, self.playerIndex),
 	)
 
 	// imposter could have won by saying the same word
