@@ -155,17 +155,15 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
 					<p>It's your turn, what do you want to do?</p>
 					<div class="flex flex-col gap-8">
-						<form class="flex flex-row gap-2 items-center">
+						<form
+							class="flex flex-row gap-2 items-center"
+							ws-send
+							hx-vals={ game_state.SerializeJsonPanic(
+								game_state.NewActionPlayerSaySynonymJson(),
+							) }
+						>
 							<input class="flex-1" type="text" name="synonym" placeholder="Synonym:" required/>
-							<button
-								type="submit"
-								ws-send
-								hx-vals={ game_state.SerializeJsonPanic(
-									game_state.NewActionPlayerSaySynonymJson(),
-								) }
-								hx-include="previous"
-								hx-disabled-elt="this"
-							>
+							<button type="submit">
 								Say synonym
 							</button>
 						</form>
