@@ -98,11 +98,10 @@ func wsId(ctx req.ReqContext) error {
 			game.RemovePlayer(playerCookies.Id.Value)
 		}
 
-		// todo: this deletes the room if 1 user refreshes, not really good experience
-		// if len(players) == 0 {
-		// 	reqContext.Rooms.DeleteRoom(roomId)
-		// 	return nil
-		// }
+		if len(state.GetGame().Players()) == 0 {
+			ctx.Rooms.DeleteRoom(roomId)
+			return nil
+		}
 
 		if err := unsafeSyncGame(state, room.WsRoom()); err != nil {
 			log.Println("unsafeSyncGame", "err", err)
