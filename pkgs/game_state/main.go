@@ -199,18 +199,27 @@ func (self *GameVoteTurn) Players(selfPlayerId string) []PlayerWithIndex {
 }
 
 type PlayerPicked struct {
-	Player Player
-	Picked Player
+	Player   Player
+	PickedBy []Player
 }
 
 func (self *GameVoteTurn) Picks() []PlayerPicked {
-	picks := make([]PlayerPicked, len(self.picks))
-	for i, v := range self.picks {
-		picks[i] = PlayerPicked{
-			Player: self.players[v.playerIndex],
-			Picked: self.players[v.pickedIndex],
-		}
+	picks := make([]PlayerPicked, len(self.players))
+	for i, v := range picks {
+		v.Player = self.players[i]
+		picks[i] = v
 	}
+
+	for _, v := range self.picks {
+		prev := picks[v.pickedIndex]
+		prev.PickedBy = append(prev.PickedBy, self.players[v.playerIndex])
+		picks[v.pickedIndex] = prev
+	}
+
+	slices.SortFunc(picks, func(a PlayerPicked, b PlayerPicked) int {
+		return len(b.PickedBy) - len(a.PickedBy)
+	})
+
 	return picks
 }
 

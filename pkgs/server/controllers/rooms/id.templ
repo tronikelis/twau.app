@@ -222,14 +222,26 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 					Restart game?
 				</button>
 			case *game_state.GameVoteTurn:
-				<div class="border border-black p-1 rounded-lg flex flex-col gap-1">
-					<p class="italic mb-1">Votes</p>
+				<h3>Votes</h3>
+				<div class="flex flex-row flex-wrap gap-4 *:flex-1 *:min-w-24">
 					for _, v := range state.Picks() {
-						<p>{ v.Player.Name } -> { v.Picked.Name }</p>
+						<div class="border p-2 flex flex-col gap-1">
+							<p class="font-bold mb-1">{ v.Player.Name }:</p>
+							<div class="flex flex-row gap-1 flex-wrap">
+								for i, x := range v.PickedBy {
+									<p class="text-muted">
+										{ x.Name }
+										if i != len(v.PickedBy)-1 {
+											{ " •" }
+										}
+									</p>
+								}
+							</div>
+						</div>
 					}
 				</div>
 				if state.Game.Players()[state.PlayerIndex()].Id == selfPlayerId {
-					<p>Guess who is the imposter</p>
+					<h4 class="mt-2">Guess who is the imposter</h4>
 					<div class="flex flex-row gap-4 flex-wrap">
 						for _, v := range state.Players(selfPlayerId) {
 							<button
