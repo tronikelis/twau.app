@@ -119,6 +119,9 @@ func (self *Game) Start() *GamePlayerChooseWord {
 	// clean garbanzo
 	self.word = ""
 	self.synonyms = nil
+	self.players = slices.DeleteFunc(self.players, func(v Player) bool {
+		return !v.Online
+	})
 
 	self.imposterIndex = rand.IntN(len(self.players))
 
