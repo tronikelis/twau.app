@@ -63,6 +63,12 @@ func getId(ctx req.ReqContext) error {
 var wsUpgrader = websocket.Upgrader{}
 
 func withLog(fn func() error) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("withLog recovered", err)
+		}
+	}()
+
 	if err := fn(); err != nil {
 		log.Println("withLog", err)
 	}
