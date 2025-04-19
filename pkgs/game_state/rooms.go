@@ -75,7 +75,7 @@ func (self Rooms) Room(roomId string) (*Room, bool) {
 	}
 
 	if room.cancelDeleteChan != nil {
-		room.cancelDeleteChan <- struct{}{}
+		close(room.cancelDeleteChan)
 	}
 
 	return room.room, true
