@@ -45,15 +45,15 @@ templ partialGameState(state game_state.GameState, selfPlayerId string) {
 				</div>
 			</div>
 			<div class="col-span-6 lg:col-span-2">
-				@partialSynonyms(state)
+				@partialChat(state)
 			</div>
 		}
 	</div>
 }
 
-templ partialSynonyms(state game_state.GameState) {
+templ partialChat(state game_state.GameState) {
 	<div class="flex flex-col gap-4 h-full">
-		<h2>Synonyms</h2>
+		<h2>Chat</h2>
 		<div class="relative h-full min-h-80">
 			<div class="absolute inset-0 size-full flex flex-col-reverse gap-4 border border-dashed p-4 overflow-auto">
 				for i := len(state.GetGame().Synonyms())-1; i >= 0; i-- {
