@@ -186,11 +186,14 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 						>
 							<input class="flex-1" type="text" name="synonym" placeholder="Synonym:" required/>
 							<button type="submit">
-								Say synonym
+								Say
 							</button>
 						</form>
 						<button
 							class="w-full"
+							if !state.FullCircle() {
+								disabled
+							}
 							type="button"
 							ws-send
 							hx-vals={ game_state.SerializeJsonPanic(
@@ -198,7 +201,10 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 							) }
 							hx-disabled-elt="this"
 						>
-							Initialize vote
+							Vote
+							if !state.FullCircle() {
+								(available after a full round)
+							}
 						</button>
 					</div>
 				} else {

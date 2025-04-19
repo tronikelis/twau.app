@@ -199,6 +199,10 @@ func wsId(ctx req.ReqContext) error {
 						return req.ErrNotYourTurn
 					}
 
+					if !game.FullCircle() {
+						return req.ErrBadAction
+					}
+
 					*state = game.InitVote()
 					return nil
 				}); err != nil {

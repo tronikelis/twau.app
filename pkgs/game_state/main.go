@@ -244,14 +244,21 @@ func (self *GameVoteTurn) Picks() []PlayerPicked {
 
 type GamePlayerTurn struct {
 	*Game
-	playerIndex int
+	playerIndex     int
+	initPlayerIndex int
+	fullCircle      bool
 }
 
 func newGamePlayerTurn(game *Game, playerIndex int) *GamePlayerTurn {
 	return &GamePlayerTurn{
-		Game:        game,
-		playerIndex: playerIndex,
+		Game:            game,
+		playerIndex:     playerIndex,
+		initPlayerIndex: playerIndex,
 	}
+}
+
+func (self *GamePlayerTurn) FullCircle() bool {
+	return self.fullCircle
 }
 
 func (self *GamePlayerTurn) InitVote() *GameVoteTurn {
@@ -276,6 +283,10 @@ func (self *GamePlayerTurn) SaySynonym(synonym string) (GameState, bool) {
 	}
 
 	self.playerIndex = (self.playerIndex + 1) % len(self.players)
+
+	if self.playerIndex == self.initPlayerIndex {
+		self.fullCircle = true
+	}
 
 	return nil, false
 }
