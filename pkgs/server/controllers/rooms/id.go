@@ -74,7 +74,7 @@ func withLog(fn func() error) {
 	}
 }
 
-func handleWs(
+func handleWsId(
 	ctx req.ReqContext,
 	socket *websocket.Conn,
 	playerCookies req.PlayerCookies,
@@ -271,7 +271,7 @@ func wsId(ctx req.ReqContext) error {
 	}
 
 	go withLog(func() error {
-		return handleWs(ctx, socket, playerCookies, room, roomId)
+		return handleWsId(ctx, socket, playerCookies, room, roomId)
 	})
 
 	return nil
