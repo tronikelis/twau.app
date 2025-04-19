@@ -74,6 +74,26 @@ templ partialChat(state game_state.GameState) {
 	</div>
 }
 
+templ playerPicks(picks []game_state.PlayerPicked) {
+	<div class="flex flex-row flex-wrap gap-4 *:flex-1 *:min-w-24">
+		for _, v := range picks {
+			<div class="border p-2 flex flex-col gap-1">
+				<p class="font-bold mb-1">{ v.Player.Name }:</p>
+				<div class="flex flex-row gap-1 flex-wrap">
+					for i, x := range v.PickedBy {
+						<p class="text-muted">
+							{ x.Name }
+							if i != len(v.PickedBy)-1 {
+								{ " •" }
+							}
+						</p>
+					}
+				</div>
+			</div>
+		}
+	</div>
+}
+
 templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 	<div class="flex flex-col gap-4">
 		<h2>Game</h2>
@@ -191,6 +211,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				<p>
 					GG, imposter won
 				</p>
+				@playerPicks(state.Picks())
 				<p>
 					Imposter was { state.Imposter().Name }
 				</p>
@@ -211,6 +232,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				<p>
 					GG, crewmates won
 				</p>
+				@playerPicks(state.Picks())
 				<p>
 					Imposter was { state.Imposter().Name }
 				</p>
@@ -230,23 +252,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 			case *game_state.GameVoteTurn:
 				<h3>Votes</h3>
 				<h4>Initialized by { state.GetGame().Players()[state.InitPlayerIndex()].Name }</h4>
-				<div class="flex flex-row flex-wrap gap-4 *:flex-1 *:min-w-24">
-					for _, v := range state.Picks() {
-						<div class="border p-2 flex flex-col gap-1">
-							<p class="font-bold mb-1">{ v.Player.Name }:</p>
-							<div class="flex flex-row gap-1 flex-wrap">
-								for i, x := range v.PickedBy {
-									<p class="text-muted">
-										{ x.Name }
-										if i != len(v.PickedBy)-1 {
-											{ " •" }
-										}
-									</p>
-								}
-							</div>
-						</div>
-					}
-				</div>
+				@playerPicks(state.Picks())
 				if state.Game.Players()[state.PlayerIndex()].Id == selfPlayerId {
 					<h4 class="mt-2">Who is the imposter?</h4>
 					<div class="flex flex-row gap-4 flex-wrap">

@@ -191,11 +191,11 @@ func (self *GameVoteTurn) Vote(playerIndex int) (GameState, bool) {
 
 		// if imposter was picked, crewmates won
 		if self.players[pickedPlayerIndex].Id == self.players[self.imposterIndex].Id {
-			return newGameCrewmateWon(self.Game), true
+			return newGameCrewmateWon(self.Game, self), true
 		}
 
 		// imposter wasn't picked, he won
-		return newGameImposterWon(self.Game), true
+		return newGameImposterWon(self.Game, self), true
 	}
 
 	return nil, false
@@ -272,7 +272,7 @@ func (self *GamePlayerTurn) SaySynonym(synonym string) (GameState, bool) {
 
 	// imposter could have won by saying the same word
 	if synonym == self.word && self.players[self.playerIndex].Id == self.players[self.imposterIndex].Id {
-		return newGameImposterWon(self.Game), true
+		return newGameImposterWon(self.Game, nil), true
 	}
 
 	self.playerIndex = (self.playerIndex + 1) % len(self.players)
@@ -320,16 +320,34 @@ func (self *GamePlayerChooseWord) Choose(index int) *GamePlayerTurn {
 
 type GameCrewmateWon struct {
 	*Game
+	voteTurn *GameVoteTurn
 }
 
-func newGameCrewmateWon(game *Game) *GameCrewmateWon {
-	return &GameCrewmateWon{Game: game}
+func newGameCrewmateWon(game *Game, voteTurn *GameVoteTurn) *GameCrewmateWon {
+	return &GameCrewmateWon{Game: game, voteTurn: voteTurn}
+}
+
+func (self *GameCrewmateWon) Picks() []PlayerPicked {
+	if self.voteTurn == nil {
+		return nil
+	}
+
+	return self.voteTurn.Picks()
 }
 
 type GameImposterWon struct {
 	*Game
+	voteTurn *GameVoteTurn
 }
 
-func newGameImposterWon(game *Game) *GameImposterWon {
-	return &GameImposterWon{Game: game}
+func (self *GameImposterWon) Picks() []PlayerPicked {
+	if self.voteTurn == nil {
+		return nil
+	}
+
+	return self.voteTurn.Picks()
+}
+
+func newGameImposterWon(game *Game, voteTurn *GameVoteTurn) *GameImposterWon {
+	return &GameImposterWon{Game: game, voteTurn: voteTurn}
 }
