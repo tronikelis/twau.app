@@ -111,6 +111,166 @@ templ playerPicks(picks []game_state.PlayerPicked) {
 	</div>
 }
 
+templ stateGame(state *game_state.Game) {
+	<button
+		type="button"
+		class="w-full"
+		ws-send
+		hx-vals={ game_state.SerializeJsonPanic(
+			game_state.NewActionStartJson(),
+		) }
+	>
+		Start game
+	</button>
+}
+
+templ stateGamePlayerChooseWord(state *game_state.GamePlayerChooseWord, selfPlayerId string) {
+	if state.Players()[state.PlayerIndex2()].Id == selfPlayerId {
+		for i, v := range state.FromWords() {
+			<button
+				class="w-full"
+				type="button"
+				ws-send
+				hx-vals={ game_state.SerializeJsonPanic(
+					game_state.NewActionPlayerChooseWordJson(i),
+				) }
+			>
+				{ v }
+			</button>
+		}
+	} else {
+		<p>
+			Wait for [REDACTED] to choose a word
+		</p>
+	}
+}
+
+templ stateGamePlayerTurn(state *game_state.GamePlayerTurn, selfPlayerId string) {
+	if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
+		<p>It's your turn, what do you want to do?</p>
+		<div class="flex flex-col gap-8">
+			<form
+				class="flex flex-row gap-2 items-center"
+				ws-send
+				hx-vals={ game_state.SerializeJsonPanic(
+					game_state.NewActionPlayerSaySynonymJson(),
+				) }
+			>
+				<input class="flex-1" type="text" name="synonym" placeholder="Synonym:" required/>
+				<button type="submit">
+					Say
+				</button>
+			</form>
+			<button
+				class="w-full"
+				if !state.FullCircle() {
+					disabled
+				}
+				type="button"
+				ws-send
+				hx-vals={ game_state.SerializeJsonPanic(
+					game_state.NewActionInitVoteJson(),
+				) }
+				hx-disabled-elt="this"
+			>
+				Vote
+				if !state.FullCircle() {
+					(available after a full round)
+				}
+			</button>
+		</div>
+	} else {
+		<p>
+			Wait for { state.Players()[state.PlayerIndex()].Name } to
+			make his decision
+		</p>
+	}
+}
+
+templ stateGameImposterWon(state *game_state.GameImposterWon) {
+	<p>
+		GG, imposter won
+	</p>
+	@playerPicks(state.Picks())
+	<p>
+		Imposter was
+		<span class={ "font-bold italic", getPlayerIndexClass(state.ImposterIndex()) }>
+			{ state.Imposter().Name }
+		</span>
+	</p>
+	<p>
+		The word was
+		<span class="font-bold italic">{ state.Word() }</span>
+	</p>
+	<button
+		class="w-full"
+		type="button"
+		ws-send
+		hx-vals={ game_state.SerializeJsonPanic(
+			game_state.NewActionRestartJson(),
+		) }
+	>
+		Restart game?
+	</button>
+}
+
+templ stateGameCrewmateWon(state *game_state.GameCrewmateWon) {
+	<p>
+		GG, crewmates won
+	</p>
+	@playerPicks(state.Picks())
+	<p>
+		Imposter was
+		<span class={ "font-bold italic", getPlayerIndexClass(state.ImposterIndex()) }>
+			{ state.Imposter().Name }
+		</span>
+	</p>
+	<p>
+		The word was
+		<span class="font-bold italic">{ state.Word() }</span>
+	</p>
+	<button
+		class="w-full"
+		type="button"
+		ws-send
+		hx-vals={ game_state.SerializeJsonPanic(
+			game_state.NewActionRestartJson(),
+		) }
+	>
+		Restart game?
+	</button>
+}
+
+templ stateGameVoteTurn(state *game_state.GameVoteTurn, selfPlayerId string) {
+	<h3>Votes</h3>
+	<h4>
+		Initialized by
+		<span class={ getPlayerIndexClass(state.InitPlayerIndex()) }>
+			{ state.GetGame().Players()[state.InitPlayerIndex()].Name }
+		</span>
+	</h4>
+	@playerPicks(state.Picks())
+	if state.Game.Players()[state.PlayerIndex()].Id == selfPlayerId {
+		<h4 class="mt-2">Who is the imposter?</h4>
+		<div class="flex flex-row gap-4 flex-wrap">
+			for _, v := range state.Players(selfPlayerId) {
+				<button
+					class={ "w-full", getPlayerIndexClass(v.Index) }
+					type="button"
+					ws-send
+					hx-vals={ game_state.SerializeJsonPanic(
+						game_state.NewActionVoteJson(v.Index),
+					) }
+				>
+					{ v.Name }
+				</button>
+			}
+		</div>
+	} else {
+		Wait for { state.Game.Players()[state.PlayerIndex()].Name } to choose the imposter
+	}
+}
+
 templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 	<div class="flex flex-col gap-4">
 		<h2>Game</h2>
@@ -161,153 +321,17 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 		</div>
 		switch state := state.(type) {
 			case *game_state.Game:
-				<button
-					type="button"
-					class="w-full"
-					ws-send
-					hx-vals={ game_state.SerializeJsonPanic(
-						game_state.NewActionStartJson(),
-					) }
-				>
-					Start game
-				</button>
+				@stateGame(state)
 			case *game_state.GamePlayerChooseWord:
-				if state.Players()[state.PlayerIndex2()].Id == selfPlayerId {
-					for i, v := range state.FromWords() {
-						<button
-							class="w-full"
-							type="button"
-							ws-send
-							hx-vals={ game_state.SerializeJsonPanic(
-								game_state.NewActionPlayerChooseWordJson(i),
-							) }
-						>
-							{ v }
-						</button>
-					}
-				} else {
-					<p>
-						Wait for [REDACTED] to choose a word
-					</p>
-				}
+				@stateGamePlayerChooseWord(state, selfPlayerId)
 			case *game_state.GamePlayerTurn:
-				if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
-					<p>It's your turn, what do you want to do?</p>
-					<div class="flex flex-col gap-8">
-						<form
-							class="flex flex-row gap-2 items-center"
-							ws-send
-							hx-vals={ game_state.SerializeJsonPanic(
-								game_state.NewActionPlayerSaySynonymJson(),
-							) }
-						>
-							<input class="flex-1" type="text" name="synonym" placeholder="Synonym:" required/>
-							<button type="submit">
-								Say
-							</button>
-						</form>
-						<button
-							class="w-full"
-							if !state.FullCircle() {
-								disabled
-							}
-							type="button"
-							ws-send
-							hx-vals={ game_state.SerializeJsonPanic(
-								game_state.NewActionInitVoteJson(),
-							) }
-							hx-disabled-elt="this"
-						>
-							Vote
-							if !state.FullCircle() {
-								(available after a full round)
-							}
-						</button>
-					</div>
-				} else {
-					<p>
-						Wait for { state.Players()[state.PlayerIndex()].Name } to
-						make his decision
-					</p>
-				}
+				@stateGamePlayerTurn(state, selfPlayerId)
 			case *game_state.GameImposterWon:
-				<p>
-					GG, imposter won
-				</p>
-				@playerPicks(state.Picks())
-				<p>
-					Imposter was
-					<span class={ "font-bold italic", getPlayerIndexClass(state.ImposterIndex()) }>
-						{ state.Imposter().Name }
-					</span>
-				</p>
-				<p>
-					The word was
-					<span class="font-bold italic">{ state.Word() }</span>
-				</p>
-				<button
-					class="w-full"
-					type="button"
-					ws-send
-					hx-vals={ game_state.SerializeJsonPanic(
-						game_state.NewActionRestartJson(),
-					) }
-				>
-					Restart game?
-				</button>
+				@stateGameImposterWon(state)
 			case *game_state.GameCrewmateWon:
-				<p>
-					GG, crewmates won
-				</p>
-				@playerPicks(state.Picks())
-				<p>
-					Imposter was
-					<span class={ "font-bold italic", getPlayerIndexClass(state.ImposterIndex()) }>
-						{ state.Imposter().Name }
-					</span>
-				</p>
-				<p>
-					The word was
-					<span class="font-bold italic">{ state.Word() }</span>
-				</p>
-				<button
-					class="w-full"
-					type="button"
-					ws-send
-					hx-vals={ game_state.SerializeJsonPanic(
-						game_state.NewActionRestartJson(),
-					) }
-				>
-					Restart game?
-				</button>
+				@stateGameCrewmateWon(state)
 			case *game_state.GameVoteTurn:
-				<h3>Votes</h3>
-				<h4>
-					Initialized by
-					<span class={ getPlayerIndexClass(state.InitPlayerIndex()) }>
-						{ state.GetGame().Players()[state.InitPlayerIndex()].Name }
-					</span>
-				</h4>
-				@playerPicks(state.Picks())
-				if state.Game.Players()[state.PlayerIndex()].Id == selfPlayerId {
-					<h4 class="mt-2">Who is the imposter?</h4>
-					<div class="flex flex-row gap-4 flex-wrap">
-						for _, v := range state.Players(selfPlayerId) {
-							<button
-								class={ "w-full", getPlayerIndexClass(v.Index) }
-								type="button"
-								ws-send
-								hx-vals={ game_state.SerializeJsonPanic(
-									game_state.NewActionVoteJson(v.Index),
-								) }
-							>
-								{ v.Name }
-							</button>
-						}
-					</div>
-				} else {
-					Wait for { state.Game.Players()[state.PlayerIndex()].Name } to choose the imposter
-				}
+				@stateGameVoteTurn(state, selfPlayerId)
 		}
 	</div>
 }
