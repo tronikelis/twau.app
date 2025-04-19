@@ -229,7 +229,7 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				</button>
 			case *game_state.GameVoteTurn:
 				<h3>Votes</h3>
-				<h4>Initialized by { state.GetGame().Players()[state.PlayerIndex()].Name }</h4>
+				<h4>Initialized by { state.GetGame().Players()[state.InitPlayerIndex()].Name }</h4>
 				<div class="flex flex-row flex-wrap gap-4 *:flex-1 *:min-w-24">
 					for _, v := range state.Picks() {
 						<div class="border p-2 flex flex-col gap-1">

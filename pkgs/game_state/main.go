@@ -160,6 +160,10 @@ func (self *GameVoteTurn) PlayerIndex() int {
 	return self.playerIndex
 }
 
+func (self *GameVoteTurn) InitPlayerIndex() int {
+	return self.initPlayerIndex
+}
+
 // returns new game state
 func (self *GameVoteTurn) Vote(playerIndex int) (GameState, bool) {
 	self.picks = append(self.picks, playerVotePick{
