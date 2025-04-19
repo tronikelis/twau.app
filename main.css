@@ -11,3 +11,25 @@ button {
 input {
   @apply border-black border p-1 rounded-none bg-transparent;
 }
+
+.player-red {
+  color: #b30000 !important;
+}
+.player-green {
+  color: #005a00 !important;
+}
+.player-blue {
+  color: #0000b3 !important;
+}
+.player-brown {
+  color: #902525 !important;
+}
+.player-pink {
+  color: #ff748c !important;
+}
+.player-purple {
+  color: #740074 !important;
+}
+.player-black {
+  color: black !important;
+}

@@ -63,6 +63,10 @@ func (self *Game) Word() string {
 	return self.word
 }
 
+func (self *Game) ImposterIndex() int {
+	return self.imposterIndex
+}
+
 func (self *Game) Imposter() Player {
 	if self.imposterIndex == -1 {
 		return Player{}
@@ -218,20 +222,29 @@ func (self *GameVoteTurn) Players(selfPlayerId string) []PlayerWithIndex {
 }
 
 type PlayerPicked struct {
-	Player   Player
-	PickedBy []Player
+	Player   PlayerWithIndex
+	PickedBy []PlayerWithIndex
 }
 
 func (self *GameVoteTurn) Picks() []PlayerPicked {
 	picks := make([]PlayerPicked, len(self.players))
 	for i, v := range picks {
-		v.Player = self.players[i]
+		v.Player = PlayerWithIndex{
+			Player: self.players[i],
+			Index:  i,
+		}
 		picks[i] = v
 	}
 
 	for _, v := range self.picks {
 		prev := picks[v.pickedIndex]
-		prev.PickedBy = append(prev.PickedBy, self.players[v.playerIndex])
+		prev.PickedBy = append(
+			prev.PickedBy,
+			PlayerWithIndex{
+				Player: self.players[v.playerIndex],
+				Index:  v.playerIndex,
+			},
+		)
 		picks[v.pickedIndex] = prev
 	}
 
