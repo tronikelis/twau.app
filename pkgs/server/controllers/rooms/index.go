@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"net/http"
 
-	"word-amongus-game/pkgs/auth"
+	"word-amongus-game/pkgs/random"
 	"word-amongus-game/pkgs/server/req"
 )
 
 func postIndex(ctx req.ReqContext) error {
 	playerName := ctx.Req().PostFormValue("player_name")
 
-	roomId, err := auth.RandomHex(auth.LengthRoomId)
+	roomId, err := random.RandomHex(random.LengthRoomId)
 	if err != nil {
 		return err
 	}

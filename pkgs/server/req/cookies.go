@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"word-amongus-game/pkgs/auth"
+	"word-amongus-game/pkgs/random"
 )
 
 var (
@@ -61,7 +62,7 @@ func GetPlayerCookies(req *http.Request, key []byte) (PlayerCookies, error) {
 }
 
 func NewPlayerCookies(playerName string, key []byte) (PlayerCookies, error) {
-	playerId, err := auth.RandomHex(auth.LengthPlayerId)
+	playerId, err := random.RandomHex(random.LengthPlayerId)
 
 	playerIdSigned, err := auth.SignStringHex(playerId, key)
 	if err != nil {

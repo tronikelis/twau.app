@@ -1,8 +1,9 @@
 package game_state
 
 import (
-	"math/rand/v2"
 	"slices"
+
+	"word-amongus-game/pkgs/random"
 )
 
 type GameState interface {
@@ -46,9 +47,10 @@ func newPlayerSynonym(synonym string, playerIndex int) PlayerSynonym {
 }
 
 type Game struct {
-	word     string
-	synonyms []PlayerSynonym
-	players  []Player
+	randomInt random.RandomIntNotSame
+	word      string
+	synonyms  []PlayerSynonym
+	players   []Player
 	// ඞ
 	imposterIndex int
 }
@@ -56,6 +58,7 @@ type Game struct {
 func NewGame() *Game {
 	return &Game{
 		imposterIndex: -1,
+		randomInt:     random.NewRandomIntNotSame(3),
 	}
 }
 
@@ -121,7 +124,7 @@ func (self *Game) Start() *GamePlayerChooseWord {
 		return !v.Online
 	})
 
-	self.imposterIndex = rand.IntN(len(self.players))
+	self.imposterIndex = self.randomInt.IntN(len(self.players))
 
 	return newGamePlayerChooseWord(self, self.imposterIndex)
 }
@@ -311,7 +314,7 @@ type GamePlayerChooseWord struct {
 }
 
 func newGamePlayerChooseWord(game *Game, imposterIndex int) *GamePlayerChooseWord {
-	playerIndex := rand.IntN(len(game.players))
+	playerIndex := game.randomInt.IntN(len(game.players))
 	// making imposter choose the word just does not make sense
 	if playerIndex == imposterIndex {
 		playerIndex = (playerIndex + 1) % len(game.players)
@@ -338,7 +341,7 @@ func (self *GamePlayerChooseWord) Choose(index int) *GamePlayerTurn {
 	}
 
 	self.word = self.fromWords[index]
-	playerIndex := rand.IntN(len(self.players))
+	playerIndex := self.randomInt.IntN(len(self.players))
 	return newGamePlayerTurn(self.Game, playerIndex)
 }
 
