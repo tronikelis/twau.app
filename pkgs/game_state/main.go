@@ -101,12 +101,6 @@ func (self *Game) RemovePlayer(id string) {
 	})
 }
 
-func (self *Game) HasPlayer(id string) bool {
-	return slices.ContainsFunc(self.players, func(player Player) bool {
-		return player.Id == id
-	})
-}
-
 func (self *Game) Players() []Player {
 	return self.players
 }
@@ -130,7 +124,12 @@ func (self *Game) Start() *GamePlayerChooseWord {
 
 // idempotent
 func (self *Game) AddPlayer(player Player) {
-	if self.HasPlayer(player.Id) {
+	index := slices.IndexFunc(self.players, func(v Player) bool {
+		return v.Id == player.Id
+	})
+
+	if index != -1 {
+		self.players[index] = player
 		return
 	}
 
