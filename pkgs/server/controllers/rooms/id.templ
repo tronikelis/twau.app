@@ -194,6 +194,9 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				<p>
 					Imposter was { state.Imposter().Name }
 				</p>
+				<p>
+					The word was { state.Word() }
+				</p>
 				<button
 					class="w-full"
 					type="button"
@@ -210,6 +213,9 @@ templ partialPlayerAction(state game_state.GameState, selfPlayerId string) {
 				</p>
 				<p>
 					Imposter was { state.Imposter().Name }
+				</p>
+				<p>
+					The word was { state.Word() }
 				</p>
 				<button
 					class="w-full"

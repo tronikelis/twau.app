@@ -76,6 +76,7 @@ func (self Rooms) Room(roomId string) (*Room, bool) {
 
 	if room.cancelDeleteChan != nil {
 		close(room.cancelDeleteChan)
+		room.cancelDeleteChan = nil
 	}
 
 	return room.room, true
