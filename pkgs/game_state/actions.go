@@ -8,7 +8,6 @@ const (
 	ActionPlayerSaySynonym
 	ActionInitVote
 	ActionVote
-	ActionRestart
 )
 
 type Action struct {
@@ -76,15 +75,5 @@ func NewActionVoteJson(playerIndex int) ActionVoteJson {
 	return ActionVoteJson{
 		Action:      Action{ActionVote},
 		PlayerIndex: playerIndex,
-	}
-}
-
-type ActionRestartJson struct {
-	Action
-}
-
-func NewActionRestartJson() ActionRestartJson {
-	return ActionRestartJson{
-		Action: Action{ActionRestart},
 	}
 }

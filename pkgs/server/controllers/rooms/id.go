@@ -135,8 +135,7 @@ func handleWsId(
 		switch action.Action {
 		case game_state.ActionStart:
 			if err := room.StateRef(func(state *game_state.GameState) error {
-				game := (*state).(*game_state.Game)
-				*state = game.Start()
+				*state = (*state).GetGame().Start()
 				return nil
 			}); err != nil {
 				return err
@@ -214,14 +213,6 @@ func handleWsId(
 				if newState, ok := game.Vote(action.PlayerIndex); ok {
 					*state = newState
 				}
-				return nil
-			}); err != nil {
-				return err
-			}
-		case game_state.ActionRestart:
-			if err := room.StateRef(func(state *game_state.GameState) error {
-				game := (*state).GetGame()
-				*state = game.Start()
 				return nil
 			}); err != nil {
 				return err

@@ -207,7 +207,7 @@ templ stateGameImposterWon(state *game_state.GameImposterWon) {
 		type="button"
 		ws-send
 		hx-vals={ game_state.SerializeJsonPanic(
-			game_state.NewActionRestartJson(),
+			game_state.NewActionStartJson(),
 		) }
 	>
 		Restart game?
@@ -234,7 +234,7 @@ templ stateGameCrewmateWon(state *game_state.GameCrewmateWon) {
 		type="button"
 		ws-send
 		hx-vals={ game_state.SerializeJsonPanic(
-			game_state.NewActionRestartJson(),
+			game_state.NewActionStartJson(),
 		) }
 	>
 		Restart game?
