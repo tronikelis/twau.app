@@ -13,6 +13,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+func checkSamePlayer(game GameState, playerIndex int, playerId string) bool {
+	return game.GetGame().Players()[playerIndex].Id == playerId
+}
+
 type Room struct {
 	wsRoom          *ws.Room
 	unsafeState     GameState
@@ -51,89 +55,72 @@ func (self *Room) GameLoop(conn *websocket.Conn, playerId string) error {
 
 		switch action.Action {
 		case ActionStart:
-			if err := self.StateRef(func(state *GameState) error {
+			self.StateRef(func(state *GameState) {
 				*state = (*state).GetGame().Start()
-				return nil
-			}); err != nil {
-				return err
-			}
-
+			})
 		case ActionPlayerChooseWord:
 			var action ActionPlayerChooseWordJson
 			if err := json.Unmarshal(bytes, &action); err != nil {
 				return err
 			}
 
-			if err := self.StateRef(func(state *GameState) error {
+			self.StateRef(func(state *GameState) {
 				game := (*state).(*GamePlayerChooseWord)
 
-				if !CheckSamePlayer(game, game.PlayerIndex2(), playerId) {
-					return ErrNotYourTurn
+				if !checkSamePlayer(game, game.PlayerIndex2(), playerId) {
+					return
 				}
 
 				*state = game.Choose(action.WordIndex)
-				return nil
-			}); err != nil {
-				return err
-			}
+			})
 		case ActionPlayerSaySynonym:
 			var action ActionPlayerSaySynonymJson
 			if err := json.Unmarshal(bytes, &action); err != nil {
 				return err
 			}
 
-			if err := self.StateRef(func(state *GameState) error {
+			self.StateRef(func(state *GameState) {
 				game := (*state).(*GamePlayerTurn)
 
-				if !CheckSamePlayer(game, game.PlayerIndex(), playerId) {
-					return ErrNotYourTurn
+				if !checkSamePlayer(game, game.PlayerIndex(), playerId) {
+					return
 				}
 
 				if newState, ok := game.SaySynonym(action.Synonym); ok {
 					*state = newState
 				}
-
-				return nil
-			}); err != nil {
-				return err
-			}
+			})
 		case ActionInitVote:
-			if err := self.StateRef(func(state *GameState) error {
+			self.StateRef(func(state *GameState) {
 				game := (*state).(*GamePlayerTurn)
 
-				if !CheckSamePlayer(game, game.PlayerIndex(), playerId) {
-					return ErrNotYourTurn
+				if !checkSamePlayer(game, game.PlayerIndex(), playerId) {
+					return
 				}
 
 				if !game.FullCircle() {
-					return ErrBadAction
+					return
 				}
 
 				*state = game.InitVote()
-				return nil
-			}); err != nil {
-				return err
-			}
+			})
 		case ActionVote:
 			var action ActionVoteJson
 			if err := json.Unmarshal(bytes, &action); err != nil {
 				return err
 			}
 
-			if err := self.StateRef(func(state *GameState) error {
+			self.StateRef(func(state *GameState) {
 				game := (*state).(*GameVoteTurn)
 
-				if !CheckSamePlayer(game, game.PlayerIndex(), playerId) {
-					return ErrNotYourTurn
+				if !checkSamePlayer(game, game.PlayerIndex(), playerId) {
+					return
 				}
 
 				if newState, ok := game.Vote(action.PlayerIndex); ok {
 					*state = newState
 				}
-				return nil
-			}); err != nil {
-				return err
-			}
+			})
 		default:
 			return ErrUnknownAction
 		}
@@ -148,19 +135,18 @@ func (self *Room) asyncListenStateChange() {
 				return
 			}
 		case <-time.After(time.Minute):
-			self.stateRefNoSend(func(state *GameState) error {
+			self.stateRefNoSend(func(state *GameState) {
 				game, ok := (*state).(*GamePlayerTurn)
 				if !ok {
-					return nil
+					return
 				}
 
 				newState, ok := game.SaySynonym("")
 				if !ok {
-					return nil
+					return
 				}
 
 				*state = newState
-				return nil
 			})
 		}
 	}
@@ -172,21 +158,19 @@ func (self *Room) cleanup() {
 
 func (self *Room) AddPlayer(conn *websocket.Conn, player Player) {
 	self.wsRoom.Add(conn, player.Id)
-	self.stateNoSend(func(state GameState) error {
+	self.stateNoSend(func(state GameState) {
 		state.GetGame().AddPlayer(player)
-		return nil
 	})
 }
 
 func (self *Room) RemovePlayer(conn *websocket.Conn, playerId string) {
 	self.wsRoom.Delete(conn)
-	self.stateNoSend(func(state GameState) error {
+	self.stateNoSend(func(state GameState) {
 		if game, ok := state.(*Game); ok {
 			game.RemovePlayer(playerId)
 		} else {
 			state.GetGame().DisconnectPlayer(playerId)
 		}
-		return nil
 	})
 }
 
@@ -198,34 +182,28 @@ func (self *Room) unsafeSyncGame() {
 	}
 }
 
-func (self *Room) stateNoSend(mutate func(state GameState) error) error {
+func (self *Room) stateNoSend(mutate func(state GameState)) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	// dont mess up the order here, FIRST sync game, THEN unlock
 	defer self.unsafeSyncGame()
-	return mutate(self.unsafeState)
+	mutate(self.unsafeState)
 }
 
-func (self *Room) stateRefNoSend(mutate func(state *GameState) error) error {
+func (self *Room) stateRefNoSend(mutate func(state *GameState)) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	// dont mess up the order here, FIRST sync game, THEN unlock
 	defer self.unsafeSyncGame()
-	return mutate(&self.unsafeState)
+	mutate(&self.unsafeState)
 }
 
-func (self *Room) StateRef(mutate func(state *GameState) error) error {
-	defer func() {
-		self.stateChangeChan <- true
-	}()
-
-	return self.stateRefNoSend(mutate)
+func (self *Room) StateRef(mutate func(state *GameState)) {
+	self.stateRefNoSend(mutate)
+	self.stateChangeChan <- true
 }
 
-func (self *Room) State(mutate func(state GameState) error) error {
-	defer func() {
-		self.stateChangeChan <- true
-	}()
-
-	return self.stateNoSend(mutate)
+func (self *Room) State(mutate func(state GameState)) {
+	self.stateNoSend(mutate)
+	self.stateChangeChan <- true
 }

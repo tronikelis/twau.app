@@ -15,10 +15,6 @@ type PlayerIndex interface {
 	PlayerIndex() int
 }
 
-func CheckSamePlayer(game GameState, playerIndex int, playerId string) bool {
-	return game.GetGame().Players()[playerIndex].Id == playerId
-}
-
 type PlayerWithIndex struct {
 	Player
 	Index int
