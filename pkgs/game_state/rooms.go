@@ -68,6 +68,8 @@ func (self Rooms) CreateRoom(roomId string) (*Room, bool) {
 }
 
 func (self Rooms) QueueDelete(roomId string) {
+	log.Println("queueing deletion of", roomId)
+
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
