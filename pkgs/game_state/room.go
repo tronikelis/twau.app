@@ -185,17 +185,17 @@ func (self *Room) unsafeSyncGame() {
 func (self *Room) stateNoChan(mutate func(state GameState)) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	// dont mess up the order here, FIRST sync game, THEN unlock
-	defer self.unsafeSyncGame()
+
 	mutate(self.unsafeState)
+	self.unsafeSyncGame()
 }
 
 func (self *Room) stateRefNoChan(mutate func(state *GameState)) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	// dont mess up the order here, FIRST sync game, THEN unlock
-	defer self.unsafeSyncGame()
+
 	mutate(&self.unsafeState)
+	self.unsafeSyncGame()
 }
 
 func (self *Room) StateRef(mutate func(state *GameState)) {
