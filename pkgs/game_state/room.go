@@ -137,8 +137,6 @@ func (self *Room) GameLoop(conn *websocket.Conn, playerId string) error {
 		default:
 			return ErrUnknownAction
 		}
-
-		self.syncGame()
 	}
 }
 
@@ -149,7 +147,7 @@ func (self *Room) asyncListenStateChange() {
 			if !ok {
 				return
 			}
-		case <-time.After(time.Second * 30):
+		case <-time.After(time.Minute):
 			self.stateRefNoSend(func(state *GameState) error {
 				game, ok := (*state).(*GamePlayerTurn)
 				if !ok {
@@ -164,8 +162,6 @@ func (self *Room) asyncListenStateChange() {
 				*state = newState
 				return nil
 			})
-
-			self.syncGame()
 		}
 	}
 }
@@ -175,12 +171,11 @@ func (self *Room) cleanup() {
 }
 
 func (self *Room) AddPlayer(conn *websocket.Conn, player Player) {
+	self.wsRoom.Add(conn, player.Id)
 	self.stateNoSend(func(state GameState) error {
 		state.GetGame().AddPlayer(player)
 		return nil
 	})
-	self.wsRoom.Add(conn, player.Id)
-	self.syncGame()
 }
 
 func (self *Room) RemovePlayer(conn *websocket.Conn, playerId string) {
@@ -193,28 +188,29 @@ func (self *Room) RemovePlayer(conn *websocket.Conn, playerId string) {
 		}
 		return nil
 	})
-	self.syncGame()
 }
 
-func (self *Room) syncGame() {
-	if err := self.stateNoSend(func(state GameState) error {
-		return self.wsRoom.WriteEach(func(writer io.Writer, data any) error {
-			return PartialGameState(state, data.(string)).Render(context.Background(), writer)
-		})
+func (self *Room) unsafeSyncGame() {
+	if err := self.wsRoom.WriteEach(func(writer io.Writer, data any) error {
+		return PartialGameState(self.unsafeState, data.(string)).Render(context.Background(), writer)
 	}); err != nil {
-		log.Println("SyncGame", "err", err)
+		log.Println("unsafeSyncGame", "err", err)
 	}
 }
 
 func (self *Room) stateNoSend(mutate func(state GameState) error) error {
 	self.mu.Lock()
 	defer self.mu.Unlock()
+	// dont mess up the order here, FIRST sync game, THEN unlock
+	defer self.unsafeSyncGame()
 	return mutate(self.unsafeState)
 }
 
 func (self *Room) stateRefNoSend(mutate func(state *GameState) error) error {
 	self.mu.Lock()
 	defer self.mu.Unlock()
+	// dont mess up the order here, FIRST sync game, THEN unlock
+	defer self.unsafeSyncGame()
 	return mutate(&self.unsafeState)
 }
 
