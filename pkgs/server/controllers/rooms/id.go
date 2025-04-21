@@ -58,18 +58,6 @@ func getId(ctx req.ReqContext) error {
 
 var wsUpgrader = websocket.Upgrader{}
 
-func withLog(fn func() error) {
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Println("withLog recovered", err)
-		}
-	}()
-
-	if err := fn(); err != nil {
-		log.Println("withLog", err)
-	}
-}
-
 func handleWsId(
 	ctx req.ReqContext,
 	conn *websocket.Conn,
@@ -113,9 +101,17 @@ func wsId(ctx req.ReqContext) error {
 		return err
 	}
 
-	go withLog(func() error {
-		return handleWsId(ctx, socket, playerCookies, room, roomId)
-	})
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Println("wsId recover", "err", err)
+			}
+		}()
+
+		if err := handleWsId(ctx, socket, playerCookies, room, roomId); err != nil {
+			log.Println("wsId", "err", err)
+		}
+	}()
 
 	return nil
 }

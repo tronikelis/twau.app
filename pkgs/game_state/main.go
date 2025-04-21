@@ -2,6 +2,7 @@ package game_state
 
 import (
 	"slices"
+	"time"
 
 	"word-amongus-game/pkgs/random"
 )
@@ -256,6 +257,7 @@ func (self *GameVoteTurn) Picks() []PlayerPicked {
 
 type GamePlayerTurn struct {
 	*Game
+	expires         time.Time
 	playerIndex     int
 	initPlayerIndex int
 	fullCircle      bool
