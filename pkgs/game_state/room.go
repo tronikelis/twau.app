@@ -135,7 +135,7 @@ func (self *Room) asyncListenStateChange() {
 				return
 			}
 		case <-time.After(time.Minute):
-			self.stateRefNoSend(func(state *GameState) {
+			self.stateRefNoChan(func(state *GameState) {
 				game, ok := (*state).(*GamePlayerTurn)
 				if !ok {
 					return
@@ -158,14 +158,14 @@ func (self *Room) cleanup() {
 
 func (self *Room) AddPlayer(conn *websocket.Conn, player Player) {
 	self.wsRoom.Add(conn, player.Id)
-	self.stateNoSend(func(state GameState) {
+	self.stateNoChan(func(state GameState) {
 		state.GetGame().AddPlayer(player)
 	})
 }
 
 func (self *Room) RemovePlayer(conn *websocket.Conn, playerId string) {
 	self.wsRoom.Delete(conn)
-	self.stateNoSend(func(state GameState) {
+	self.stateNoChan(func(state GameState) {
 		if game, ok := state.(*Game); ok {
 			game.RemovePlayer(playerId)
 		} else {
@@ -182,7 +182,7 @@ func (self *Room) unsafeSyncGame() {
 	}
 }
 
-func (self *Room) stateNoSend(mutate func(state GameState)) {
+func (self *Room) stateNoChan(mutate func(state GameState)) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	// dont mess up the order here, FIRST sync game, THEN unlock
@@ -190,7 +190,7 @@ func (self *Room) stateNoSend(mutate func(state GameState)) {
 	mutate(self.unsafeState)
 }
 
-func (self *Room) stateRefNoSend(mutate func(state *GameState)) {
+func (self *Room) stateRefNoChan(mutate func(state *GameState)) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	// dont mess up the order here, FIRST sync game, THEN unlock
@@ -199,11 +199,11 @@ func (self *Room) stateRefNoSend(mutate func(state *GameState)) {
 }
 
 func (self *Room) StateRef(mutate func(state *GameState)) {
-	self.stateRefNoSend(mutate)
+	self.stateRefNoChan(mutate)
 	self.stateChangeChan <- true
 }
 
 func (self *Room) State(mutate func(state GameState)) {
-	self.stateNoSend(mutate)
+	self.stateNoChan(mutate)
 	self.stateChangeChan <- true
 }
