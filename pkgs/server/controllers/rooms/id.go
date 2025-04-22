@@ -3,7 +3,6 @@ package rooms
 import (
 	"fmt"
 	"log"
-	"net/http"
 
 	"word-amongus-game/pkgs/game_state"
 	"word-amongus-game/pkgs/server/req"
@@ -21,15 +20,11 @@ func postId(ctx req.ReqContext) error {
 		return req.ErrRoomDoesNotExist
 	}
 
-	_, err := req.GetPlayerFromCookies(ctx.Req(), ctx.SecretKey)
+	_, err := ctx.Player()
 	if err != nil {
-		playerCookies, err := req.NewPlayerCookies(playerName, ctx.SecretKey)
-		if err != nil {
+		if err := ctx.SetPlayer(playerName); err != nil {
 			return err
 		}
-
-		http.SetCookie(ctx.Writer(), playerCookies.Id)
-		http.SetCookie(ctx.Writer(), playerCookies.Name)
 	}
 
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))
@@ -86,7 +81,7 @@ func wsId(ctx req.ReqContext) error {
 		return req.ErrRoomDoesNotExist
 	}
 
-	player, err := req.GetPlayerFromCookies(ctx.Req(), ctx.SecretKey)
+	player, err := ctx.Player()
 	if err != nil {
 		return err
 	}
