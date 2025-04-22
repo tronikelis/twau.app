@@ -68,8 +68,6 @@ addEventListener("htmx:beforeCleanupElement", (ev) => {
 });
 
 addEventListener("DOMContentLoaded", () => {
-  mountComponents(document);
-
   new MutationObserver((records) => {
     for (const record of records) {
       for (const node of record.removedNodes) {
@@ -80,4 +78,8 @@ addEventListener("DOMContentLoaded", () => {
     childList: true,
     subtree: true,
   });
+});
+
+addEventListener("DOMContentLoaded", () => {
+  mountComponents(document);
 });
