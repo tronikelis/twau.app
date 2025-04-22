@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"word-amongus-game/pkgs/ws"
+	"twau.app/pkgs/ws"
 
 	"github.com/gorilla/websocket"
 )

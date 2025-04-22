@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"word-amongus-game/pkgs/auth"
-	"word-amongus-game/pkgs/game_state"
-	"word-amongus-game/pkgs/random"
+	"twau.app/pkgs/auth"
+	"twau.app/pkgs/game_state"
+	"twau.app/pkgs/random"
 
 	"github.com/tronikelis/maruchi"
 )

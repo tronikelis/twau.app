@@ -4,7 +4,7 @@ import (
 	"slices"
 	"time"
 
-	"word-amongus-game/pkgs/random"
+	"twau.app/pkgs/random"
 )
 
 type GameState interface {

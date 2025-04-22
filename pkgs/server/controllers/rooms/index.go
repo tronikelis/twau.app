@@ -3,8 +3,8 @@ package rooms
 import (
 	"fmt"
 
-	"word-amongus-game/pkgs/random"
-	"word-amongus-game/pkgs/server/req"
+	"twau.app/pkgs/random"
+	"twau.app/pkgs/server/req"
 )
 
 func postIndex(ctx req.ReqContext) error {

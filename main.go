@@ -8,9 +8,9 @@ import (
 	"reflect"
 	"strconv"
 
-	"word-amongus-game/pkgs/game_state"
-	"word-amongus-game/pkgs/server/controllers"
-	"word-amongus-game/pkgs/server/req"
+	"twau.app/pkgs/game_state"
+	"twau.app/pkgs/server/controllers"
+	"twau.app/pkgs/server/req"
 
 	"github.com/tronikelis/maruchi"
 )

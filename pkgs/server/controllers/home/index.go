@@ -1,7 +1,7 @@
 package home
 
 import (
-	"word-amongus-game/pkgs/server/req"
+	"twau.app/pkgs/server/req"
 )
 
 func getIndex(ctx req.ReqContext) error {
