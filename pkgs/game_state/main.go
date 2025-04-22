@@ -7,6 +7,8 @@ import (
 	"twau.app/pkgs/random"
 )
 
+const PlayerTurnDuration = time.Minute * 3
+
 type GameState interface {
 	GetGame() *Game
 }
@@ -19,6 +21,10 @@ type PlayerIndex interface {
 type PlayerWithIndex struct {
 	Player
 	Index int
+}
+
+type Expires interface {
+	Expires() time.Time
 }
 
 type Player struct {
@@ -268,7 +274,12 @@ func newGamePlayerTurn(game *Game, playerIndex int) *GamePlayerTurn {
 		Game:            game,
 		playerIndex:     playerIndex,
 		initPlayerIndex: playerIndex,
+		expires:         time.Now().Add(PlayerTurnDuration),
 	}
+}
+
+func (self *GamePlayerTurn) Expires() time.Time {
+	return self.expires
 }
 
 func (self *GamePlayerTurn) FullCircle() bool {
@@ -301,6 +312,8 @@ func (self *GamePlayerTurn) SaySynonym(synonym string) (GameState, bool) {
 	if self.playerIndex == self.initPlayerIndex {
 		self.fullCircle = true
 	}
+
+	self.expires = time.Now().Add(PlayerTurnDuration)
 
 	return nil, false
 }

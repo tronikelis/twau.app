@@ -28,6 +28,7 @@ templ Page() {
 					"allowNestedOobSwaps": false
 				}'
 			/>
+			<script src={ fmt.Sprintf("/static/js/ts/_module.js?h=%d", hash) }></script>
 		</head>
 		<body>
 			{ children... }

@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "target": "esnext",
+    "esModuleInterop": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "module": "ESNext",
+    "baseUrl": ".",
+    "rootDir": "."
+  }
+}

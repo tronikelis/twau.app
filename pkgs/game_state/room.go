@@ -134,7 +134,7 @@ func (self *Room) asyncListenStateChange() {
 			if !ok {
 				return
 			}
-		case <-time.After(time.Minute):
+		case <-time.After(PlayerTurnDuration):
 			self.stateRefNoChan(func(state *GameState) {
 				game, ok := (*state).(*GamePlayerTurn)
 				if !ok {

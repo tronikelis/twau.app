@@ -1,6 +1,7 @@
 package game_state
 
 import "fmt"
+import "time"
 
 var playerIndexClass = []string{
 	"player-red",
@@ -240,7 +241,13 @@ templ stateGameVoteTurn(state *GameVoteTurn, selfPlayerId string) {
 
 templ partialPlayerAction(state GameState, selfPlayerId string) {
 	<div class="flex flex-col gap-4">
-		<h2>Game</h2>
+		<h2>
+			Game
+			if state, ok := state.(Expires); ok {
+				•
+				<span data-component-id="expires_timer" data-date={ state.Expires().Format(time.RFC3339Nano) }>00:00</span>
+			}
+		</h2>
 		<div class="flex flex-col gap-2">
 			<p>
 				State:

@@ -12,6 +12,10 @@ tasks:
           ARGS: "--watch"
       - task: dev/templ
       - task: dev/server
+      - task: build/ts
+        vars:
+          ARGS: "--watch"
+
 
   build/tailwind:
     cmd: npx -y @tailwindcss/cli -i ./main.css -o ./static/css/tw.css --minify {{.ARGS}} {{.CLI_ARGS}}
@@ -30,3 +34,12 @@ tasks:
     env:
       PORT: 3000
       SECRET_KEY: secret
+
+
+  build/ts:
+    cmd: |
+      npx esbuild \
+      $(find -type f -name '*_module.ts') \
+      --outdir=static/js \
+      --bundle --minify --outbase=./ {{.ARGS}} {{.CLI_ARGS}}
+
