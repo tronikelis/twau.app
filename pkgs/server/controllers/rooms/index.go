@@ -21,9 +21,9 @@ func postIndex(ctx req.ReqContext) error {
 		return req.ErrRoomExists
 	}
 
-	playerCookies, err := req.GetPlayerCookies(ctx.Req(), ctx.SecretKey)
+	_, err = req.GetPlayerFromCookies(ctx.Req(), ctx.SecretKey)
 	if err != nil {
-		playerCookies, err = req.NewPlayerCookies(playerName, ctx.SecretKey)
+		playerCookies, err := req.NewPlayerCookies(playerName, ctx.SecretKey)
 		if err != nil {
 			return err
 		}

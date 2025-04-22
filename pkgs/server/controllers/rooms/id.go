@@ -21,9 +21,9 @@ func postId(ctx req.ReqContext) error {
 		return req.ErrRoomDoesNotExist
 	}
 
-	playerCookies, err := req.GetPlayerCookies(ctx.Req(), ctx.SecretKey)
+	_, err := req.GetPlayerFromCookies(ctx.Req(), ctx.SecretKey)
 	if err != nil {
-		playerCookies, err = req.NewPlayerCookies(playerName, ctx.SecretKey)
+		playerCookies, err := req.NewPlayerCookies(playerName, ctx.SecretKey)
 		if err != nil {
 			return err
 		}
@@ -61,22 +61,22 @@ var wsUpgrader = websocket.Upgrader{}
 func handleWsId(
 	ctx req.ReqContext,
 	conn *websocket.Conn,
-	playerCookies req.PlayerCookies,
+	player req.Player,
 	room *game_state.Room,
 	roomId string,
 ) error {
-	log.Println(fmt.Sprintf("%s connected, [%s]", playerCookies.Name.Value, playerCookies.Id.Value))
+	log.Println(fmt.Sprintf("%s connected, [%s]", player.Name, player.Id))
 
-	room.AddPlayer(conn, game_state.NewPlayer(playerCookies.Id.Value, playerCookies.Name.Value))
+	room.AddPlayer(conn, game_state.NewPlayer(player.Id, player.Name))
 	defer room.State(func(state game_state.GameState) {
 		if state.GetGame().PlayersOnline() == 0 {
 			ctx.Rooms.QueueDelete(roomId)
 		}
 	})
-	defer room.RemovePlayer(conn, playerCookies.Id.Value)
+	defer room.RemovePlayer(conn, player.Id)
 	defer conn.Close()
 
-	return room.GameLoop(conn, playerCookies.Id.Value)
+	return room.GameLoop(conn, player.Id)
 }
 
 func wsId(ctx req.ReqContext) error {
@@ -86,7 +86,7 @@ func wsId(ctx req.ReqContext) error {
 		return req.ErrRoomDoesNotExist
 	}
 
-	playerCookies, err := req.GetPlayerCookies(ctx.Req(), ctx.SecretKey)
+	player, err := req.GetPlayerFromCookies(ctx.Req(), ctx.SecretKey)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func wsId(ctx req.ReqContext) error {
 			}
 		}()
 
-		if err := handleWsId(ctx, socket, playerCookies, room, roomId); err != nil {
+		if err := handleWsId(ctx, socket, player, room, roomId); err != nil {
 			log.Println("wsId", "err", err)
 		}
 	}()

@@ -30,34 +30,39 @@ type PlayerCookies struct {
 	Name *http.Cookie
 }
 
-func GetPlayerCookies(req *http.Request, key []byte) (PlayerCookies, error) {
+type Player struct {
+	Id   string
+	Name string
+}
+
+func GetPlayerFromCookies(req *http.Request, key []byte) (Player, error) {
 	playerIdCookie, err := req.Cookie(CookiePlayerId.Name)
 	if err != nil {
-		return PlayerCookies{}, err
+		return Player{}, err
 	}
 
 	playerNameCookie, err := req.Cookie(CookiePlayerName.Name)
 	if err != nil {
-		return PlayerCookies{}, err
+		return Player{}, err
 	}
 
 	playerIdSigned1, playerId, found := strings.Cut(playerIdCookie.Value, ":")
 	if !found {
-		return PlayerCookies{}, fmt.Errorf("invalid player id cookie")
+		return Player{}, fmt.Errorf("invalid player id cookie")
 	}
 
 	playerIdSigned2, err := auth.SignStringHex(playerId, key)
 	if err != nil {
-		return PlayerCookies{}, err
+		return Player{}, err
 	}
 
 	if subtle.ConstantTimeCompare([]byte(playerIdSigned1), []byte(playerIdSigned2)) != 1 {
-		return PlayerCookies{}, fmt.Errorf("unauthorized player id cookie")
+		return Player{}, fmt.Errorf("unauthorized player id cookie")
 	}
 
-	return PlayerCookies{
-		Id:   playerIdCookie,
-		Name: playerNameCookie,
+	return Player{
+		Id:   playerId,
+		Name: playerNameCookie.Value,
 	}, nil
 }
 
