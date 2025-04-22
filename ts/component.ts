@@ -54,10 +54,12 @@ function mountComponents(on: Mountable) {
 );
 
 function maybeUnmount(parent: Node) {
-  for (const [i, comp] of mounted.entries()) {
+  for (let i = 0; i < mounted.length; i++) {
+    const comp = mounted[i]!;
     if (parent.contains(comp.element) || parent === comp.element) {
       comp.cleanup?.();
       mounted.splice(i, 1);
+      i--;
     }
   }
 }
