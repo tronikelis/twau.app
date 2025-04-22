@@ -7,7 +7,7 @@ import (
 	"twau.app/pkgs/random"
 )
 
-const PlayerTurnDuration = time.Minute * 3
+const PlayerTurnDuration = time.Minute * 2
 
 type GameState interface {
 	GetGame() *Game
