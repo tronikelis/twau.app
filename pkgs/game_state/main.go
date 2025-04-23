@@ -2,9 +2,12 @@ package game_state
 
 import (
 	"slices"
+	"time"
 
-	"word-amongus-game/pkgs/random"
+	"twau.app/pkgs/random"
 )
+
+const PlayerTurnDuration = time.Minute * 2
 
 type GameState interface {
 	GetGame() *Game
@@ -15,13 +18,13 @@ type PlayerIndex interface {
 	PlayerIndex() int
 }
 
-func CheckSamePlayer(game GameState, playerIndex int, playerId string) bool {
-	return game.GetGame().Players()[playerIndex].Id == playerId
-}
-
 type PlayerWithIndex struct {
 	Player
 	Index int
+}
+
+type Expires interface {
+	Expires() time.Time
 }
 
 type Player struct {
@@ -260,6 +263,7 @@ func (self *GameVoteTurn) Picks() []PlayerPicked {
 
 type GamePlayerTurn struct {
 	*Game
+	expires         time.Time
 	playerIndex     int
 	initPlayerIndex int
 	fullCircle      bool
@@ -270,7 +274,12 @@ func newGamePlayerTurn(game *Game, playerIndex int) *GamePlayerTurn {
 		Game:            game,
 		playerIndex:     playerIndex,
 		initPlayerIndex: playerIndex,
+		expires:         time.Now().Add(PlayerTurnDuration),
 	}
+}
+
+func (self *GamePlayerTurn) Expires() time.Time {
+	return self.expires
 }
 
 func (self *GamePlayerTurn) FullCircle() bool {
@@ -303,6 +312,8 @@ func (self *GamePlayerTurn) SaySynonym(synonym string) (GameState, bool) {
 	if self.playerIndex == self.initPlayerIndex {
 		self.fullCircle = true
 	}
+
+	self.expires = time.Now().Add(PlayerTurnDuration)
 
 	return nil, false
 }

@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"word-amongus-game/pkgs/server/controllers/home"
-	"word-amongus-game/pkgs/server/controllers/rooms"
+	"twau.app/pkgs/server/controllers/home"
+	"twau.app/pkgs/server/controllers/rooms"
 
 	"github.com/tronikelis/maruchi"
 )

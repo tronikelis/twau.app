@@ -2,10 +2,9 @@ package rooms
 
 import (
 	"fmt"
-	"net/http"
 
-	"word-amongus-game/pkgs/random"
-	"word-amongus-game/pkgs/server/req"
+	"twau.app/pkgs/random"
+	"twau.app/pkgs/server/req"
 )
 
 func postIndex(ctx req.ReqContext) error {
@@ -21,15 +20,11 @@ func postIndex(ctx req.ReqContext) error {
 		return req.ErrRoomExists
 	}
 
-	playerCookies, err := req.GetPlayerCookies(ctx.Req(), ctx.SecretKey)
+	_, err = ctx.Player()
 	if err != nil {
-		playerCookies, err = req.NewPlayerCookies(playerName, ctx.SecretKey)
-		if err != nil {
+		if err := ctx.SetPlayer(playerName); err != nil {
 			return err
 		}
-
-		http.SetCookie(ctx.Writer(), playerCookies.Id)
-		http.SetCookie(ctx.Writer(), playerCookies.Name)
 	}
 
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))

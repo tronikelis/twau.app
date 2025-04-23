@@ -4,39 +4,7 @@ import (
 	"log"
 	"sync"
 	"time"
-
-	"word-amongus-game/pkgs/ws"
 )
-
-type Room struct {
-	wsRoom      *ws.Room
-	unsafeState GameState
-	mu          *sync.Mutex
-}
-
-func NewRoom() *Room {
-	return &Room{
-		wsRoom:      ws.NewRoom(),
-		unsafeState: NewGame(),
-		mu:          &sync.Mutex{},
-	}
-}
-
-func (self *Room) WsRoom() *ws.Room {
-	return self.wsRoom
-}
-
-func (self *Room) StateRef(mutate func(state *GameState) error) error {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-	return mutate(&self.unsafeState)
-}
-
-func (self *Room) State(mutate func(state GameState) error) error {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-	return mutate(self.unsafeState)
-}
 
 type roomWithDeleteChan struct {
 	room             *Room // can be returned with a locked outer mutex
@@ -100,12 +68,19 @@ func (self Rooms) CreateRoom(roomId string) (*Room, bool) {
 }
 
 func (self Rooms) QueueDelete(roomId string) {
+	log.Println("queueing deletion of", roomId)
+
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
 	room, ok := self.statesById[roomId]
 	if !ok {
 		return
+	}
+
+	if room.cancelDeleteChan != nil {
+		close(room.cancelDeleteChan)
+		room.cancelDeleteChan = nil
 	}
 
 	cancelDeleteChan := make(chan struct{})
@@ -128,5 +103,11 @@ func (self Rooms) deleteRoom(roomId string) {
 
 	log.Println("deleting room", roomId)
 
+	room, ok := self.statesById[roomId]
+	if !ok {
+		return
+	}
+
+	room.room.cleanup()
 	delete(self.statesById, roomId)
 }

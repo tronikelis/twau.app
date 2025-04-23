@@ -1,16 +1,11 @@
 package rooms
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 
-	"word-amongus-game/pkgs/game_state"
-	"word-amongus-game/pkgs/server/req"
-	"word-amongus-game/pkgs/ws"
+	"twau.app/pkgs/game_state"
+	"twau.app/pkgs/server/req"
 
 	"github.com/gorilla/websocket"
 )
@@ -25,15 +20,11 @@ func postId(ctx req.ReqContext) error {
 		return req.ErrRoomDoesNotExist
 	}
 
-	playerCookies, err := req.GetPlayerCookies(ctx.Req(), ctx.SecretKey)
+	_, err := ctx.Player()
 	if err != nil {
-		playerCookies, err = req.NewPlayerCookies(playerName, ctx.SecretKey)
-		if err != nil {
+		if err := ctx.SetPlayer(playerName); err != nil {
 			return err
 		}
-
-		http.SetCookie(ctx.Writer(), playerCookies.Id)
-		http.SetCookie(ctx.Writer(), playerCookies.Name)
 	}
 
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))
@@ -62,181 +53,25 @@ func getId(ctx req.ReqContext) error {
 
 var wsUpgrader = websocket.Upgrader{}
 
-func withLog(fn func() error) {
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Println("withLog recovered", err)
-		}
-	}()
-
-	if err := fn(); err != nil {
-		log.Println("withLog", err)
-	}
-}
-
 func handleWsId(
 	ctx req.ReqContext,
-	socket *websocket.Conn,
-	playerCookies req.PlayerCookies,
+	conn *websocket.Conn,
+	player req.Player,
 	room *game_state.Room,
 	roomId string,
 ) error {
-	log.Println(fmt.Sprintf("%s connected, [%s]", playerCookies.Name.Value, playerCookies.Id.Value))
+	log.Println(fmt.Sprintf("%s connected, [%s]", player.Name, player.Id))
 
-	if err := room.State(func(state game_state.GameState) error {
-		state.GetGame().AddPlayer(game_state.NewPlayer(playerCookies.Id.Value, playerCookies.Name.Value))
-		return nil
-	}); err != nil {
-		return err
-	}
-	defer room.State(func(state game_state.GameState) error { // 3. sync changes to others
-		if game, ok := state.(*game_state.Game); ok {
-			game.RemovePlayer(playerCookies.Id.Value)
-		} else {
-			state.GetGame().DisconnectPlayer(playerCookies.Id.Value)
-		}
-
+	room.AddPlayer(conn, game_state.NewPlayer(player.Id, player.Name))
+	defer room.State(func(state game_state.GameState) {
 		if state.GetGame().PlayersOnline() == 0 {
 			ctx.Rooms.QueueDelete(roomId)
-			log.Println("queueing deletion of", roomId)
-			return nil
 		}
-
-		if err := unsafeSyncGame(state, room.WsRoom()); err != nil {
-			log.Println("unsafeSyncGame", "err", err)
-		}
-
-		return nil
 	})
+	defer room.RemovePlayer(conn, player.Id)
+	defer conn.Close()
 
-	room.WsRoom().Add(socket, playerCookies.Id.Value)
-	defer room.WsRoom().Delete(socket) // 2. remove from ws room
-	defer socket.Close()               // 1. close the ws conn
-
-	if err := syncGame(room); err != nil {
-		log.Println("syncGame", "err", err)
-	}
-
-	// the main game loop, events are as follows:
-	// 1. read an action from a client
-	// 2. change game state according to the action
-	// 3. sync updated game state to all clients
-	for {
-		_, bytes, err := socket.ReadMessage()
-		if err != nil {
-			return err
-		}
-
-		var action game_state.Action
-		if err := json.Unmarshal(bytes, &action); err != nil {
-			return err
-		}
-
-		switch action.Action {
-		case game_state.ActionStart:
-			if err := room.StateRef(func(state *game_state.GameState) error {
-				*state = (*state).GetGame().Start()
-				return nil
-			}); err != nil {
-				return err
-			}
-
-		case game_state.ActionPlayerChooseWord:
-			var action game_state.ActionPlayerChooseWordJson
-			if err := json.Unmarshal(bytes, &action); err != nil {
-				return err
-			}
-
-			if err := room.StateRef(func(state *game_state.GameState) error {
-				game := (*state).(*game_state.GamePlayerChooseWord)
-
-				if !game_state.CheckSamePlayer(game, game.PlayerIndex2(), playerCookies.Id.Value) {
-					return req.ErrNotYourTurn
-				}
-
-				*state = game.Choose(action.WordIndex)
-				return nil
-			}); err != nil {
-				return err
-			}
-		case game_state.ActionPlayerSaySynonym:
-			var action game_state.ActionPlayerSaySynonymJson
-			if err := json.Unmarshal(bytes, &action); err != nil {
-				return err
-			}
-
-			if err := room.StateRef(func(state *game_state.GameState) error {
-				game := (*state).(*game_state.GamePlayerTurn)
-
-				if !game_state.CheckSamePlayer(game, game.PlayerIndex(), playerCookies.Id.Value) {
-					return req.ErrNotYourTurn
-				}
-
-				if newState, ok := game.SaySynonym(action.Synonym); ok {
-					*state = newState
-				}
-
-				return nil
-			}); err != nil {
-				return err
-			}
-		case game_state.ActionInitVote:
-			if err := room.StateRef(func(state *game_state.GameState) error {
-				game := (*state).(*game_state.GamePlayerTurn)
-
-				if !game_state.CheckSamePlayer(game, game.PlayerIndex(), playerCookies.Id.Value) {
-					return req.ErrNotYourTurn
-				}
-
-				if !game.FullCircle() {
-					return req.ErrBadAction
-				}
-
-				*state = game.InitVote()
-				return nil
-			}); err != nil {
-				return err
-			}
-		case game_state.ActionVote:
-			var action game_state.ActionVoteJson
-			if err := json.Unmarshal(bytes, &action); err != nil {
-				return err
-			}
-
-			if err := room.StateRef(func(state *game_state.GameState) error {
-				game := (*state).(*game_state.GameVoteTurn)
-
-				if !game_state.CheckSamePlayer(game, game.PlayerIndex(), playerCookies.Id.Value) {
-					return req.ErrNotYourTurn
-				}
-
-				if newState, ok := game.Vote(action.PlayerIndex); ok {
-					*state = newState
-				}
-				return nil
-			}); err != nil {
-				return err
-			}
-		default:
-			return req.ErrUnknownAction
-		}
-
-		if err := syncGame(room); err != nil {
-			log.Println("syncGame", "err", err)
-		}
-	}
-}
-
-func unsafeSyncGame(state game_state.GameState, to *ws.Room) error {
-	return to.WriteEach(func(writer io.Writer, data any) error {
-		return partialGameState(state, data.(string)).Render(context.Background(), writer)
-	})
-}
-
-func syncGame(room *game_state.Room) error {
-	return room.State(func(state game_state.GameState) error {
-		return unsafeSyncGame(state, room.WsRoom())
-	})
+	return room.GameLoop(conn, player.Id)
 }
 
 func wsId(ctx req.ReqContext) error {
@@ -246,7 +81,7 @@ func wsId(ctx req.ReqContext) error {
 		return req.ErrRoomDoesNotExist
 	}
 
-	playerCookies, err := req.GetPlayerCookies(ctx.Req(), ctx.SecretKey)
+	player, err := ctx.Player()
 	if err != nil {
 		return err
 	}
@@ -261,9 +96,17 @@ func wsId(ctx req.ReqContext) error {
 		return err
 	}
 
-	go withLog(func() error {
-		return handleWsId(ctx, socket, playerCookies, room, roomId)
-	})
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Println("wsId recover", "err", err)
+			}
+		}()
+
+		if err := handleWsId(ctx, socket, player, room, roomId); err != nil {
+			log.Println("wsId", "err", err)
+		}
+	}()
 
 	return nil
 }

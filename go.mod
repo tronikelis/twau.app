@@ -1,4 +1,4 @@
-module word-amongus-game
+module twau.app
 
 go 1.24.1
 

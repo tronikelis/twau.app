@@ -1,0 +1,360 @@
+package game_state
+
+import "fmt"
+import "time"
+
+var playerIndexClass = []string{
+	"player-red",
+	"player-green",
+	"player-blue",
+	"player-brown",
+	"player-pink",
+	"player-purple",
+	"player-black",
+}
+
+func getPlayerIndexClass(index int) string {
+	return playerIndexClass[index%len(playerIndexClass)]
+}
+
+templ PartialGameState(state GameState, selfPlayerId string) {
+	<div id="game_state" class="grid grid-cols-6 gap-8" hx-swap-oob="outerHTML">
+		if state != nil {
+			<div class="col-span-6 lg:col-span-4">
+				<div class="flex flex-col gap-8">
+					@partialPlayers(state, selfPlayerId)
+					@partialPlayerAction(state, selfPlayerId)
+				</div>
+			</div>
+			<div class="col-span-6 lg:col-span-2">
+				@partialChat(state)
+			</div>
+		}
+	</div>
+}
+
+templ partialChat(state GameState) {
+	<div class="flex flex-col gap-4 h-full">
+		<h2>Chat</h2>
+		<div class="relative h-full min-h-80">
+			<div class="absolute inset-0 size-full flex flex-col-reverse gap-4 border border-dashed p-4 overflow-auto">
+				for i := len(state.GetGame().Synonyms())-1; i >= 0; i-- {
+					{{
+						v := state.GetGame().Synonyms()[i]
+					}}
+					<div class="flex flex-col gap-1">
+						<p class={ "font-bold", getPlayerIndexClass(v.PlayerIndex) }>
+							{ state.GetGame().Players()[v.PlayerIndex].Name }:
+						</p>
+						<p>
+							{ v.Synonym }
+						</p>
+					</div>
+				}
+			</div>
+		</div>
+	</div>
+}
+
+templ playerPicks(picks []PlayerPicked) {
+	<div class="flex flex-row flex-wrap gap-4 *:flex-1 *:min-w-24">
+		for _, v := range picks {
+			<div class="border p-2 flex flex-col gap-1">
+				<p class="font-bold mb-1">
+					<span class={ getPlayerIndexClass(v.Player.Index) }>{ v.Player.Name }</span>
+					↓
+				</p>
+				<div class="flex flex-row gap-1 flex-wrap">
+					for i, x := range v.PickedBy {
+						<p class={ getPlayerIndexClass(x.Index) }>
+							{ x.Name }
+							if i != len(v.PickedBy)-1 {
+								{ " •" }
+							}
+						</p>
+					}
+				</div>
+			</div>
+		}
+	</div>
+}
+
+templ stateGame(state *Game) {
+	<button
+		type="button"
+		class="w-full"
+		ws-send
+		hx-vals={ SerializeJsonPanic(
+			NewActionStartJson(),
+		) }
+	>
+		Start game
+	</button>
+}
+
+templ stateGamePlayerChooseWord(state *GamePlayerChooseWord, selfPlayerId string) {
+	if state.Players()[state.PlayerIndex2()].Id == selfPlayerId {
+		for i, v := range state.FromWords() {
+			<button
+				class="w-full"
+				type="button"
+				ws-send
+				hx-vals={ SerializeJsonPanic(
+					NewActionPlayerChooseWordJson(i),
+				) }
+			>
+				{ v }
+			</button>
+		}
+	} else {
+		<p>
+			Wait for [REDACTED] to choose a word
+		</p>
+	}
+}
+
+templ stateGamePlayerTurn(state *GamePlayerTurn, selfPlayerId string) {
+	if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
+		<p>It's your turn, what do you want to do?</p>
+		<div class="flex flex-col gap-8">
+			<form
+				class="flex flex-row gap-2 items-center"
+				ws-send
+				hx-vals={ SerializeJsonPanic(
+					NewActionPlayerSaySynonymJson(),
+				) }
+			>
+				<input class="flex-1" type="text" name="synonym" placeholder="Synonym:" required/>
+				<button type="submit">
+					Say
+				</button>
+			</form>
+			<button
+				class="w-full"
+				if !state.FullCircle() {
+					disabled
+				}
+				type="button"
+				ws-send
+				hx-vals={ SerializeJsonPanic(
+					NewActionInitVoteJson(),
+				) }
+				hx-disabled-elt="this"
+			>
+				Vote
+				if !state.FullCircle() {
+					(available after a full round)
+				}
+			</button>
+		</div>
+	} else {
+		<p>
+			Wait for { state.Players()[state.PlayerIndex()].Name } to
+			make his decision
+		</p>
+	}
+}
+
+templ stateGameImposterWon(state *GameImposterWon) {
+	<p>
+		GG, imposter won
+	</p>
+	@playerPicks(state.Picks())
+	<p>
+		Imposter was
+		<span class={ "font-bold italic", getPlayerIndexClass(state.ImposterIndex()) }>
+			{ state.Imposter().Name }
+		</span>
+	</p>
+	<p>
+		The word was
+		<span class="font-bold italic">{ state.Word() }</span>
+	</p>
+	<button
+		class="w-full"
+		type="button"
+		ws-send
+		hx-vals={ SerializeJsonPanic(
+			NewActionStartJson(),
+		) }
+	>
+		Restart game?
+	</button>
+}
+
+templ stateGameCrewmateWon(state *GameCrewmateWon) {
+	<p>
+		GG, crewmates won
+	</p>
+	@playerPicks(state.Picks())
+	<p>
+		Imposter was
+		<span class={ "font-bold italic", getPlayerIndexClass(state.ImposterIndex()) }>
+			{ state.Imposter().Name }
+		</span>
+	</p>
+	<p>
+		The word was
+		<span class="font-bold italic">{ state.Word() }</span>
+	</p>
+	<button
+		class="w-full"
+		type="button"
+		ws-send
+		hx-vals={ SerializeJsonPanic(
+			NewActionStartJson(),
+		) }
+	>
+		Restart game?
+	</button>
+}
+
+templ stateGameVoteTurn(state *GameVoteTurn, selfPlayerId string) {
+	<h3>Votes</h3>
+	<h4>
+		Initialized by
+		<span class={ getPlayerIndexClass(state.InitPlayerIndex()) }>
+			{ state.GetGame().Players()[state.InitPlayerIndex()].Name }
+		</span>
+	</h4>
+	@playerPicks(state.Picks())
+	if state.Game.Players()[state.PlayerIndex()].Id == selfPlayerId {
+		<h4 class="mt-2">Who is the imposter?</h4>
+		<div class="flex flex-row gap-4 flex-wrap">
+			for _, v := range state.Players(selfPlayerId) {
+				<button
+					class={ "w-full", getPlayerIndexClass(v.Index) }
+					type="button"
+					ws-send
+					hx-vals={ SerializeJsonPanic(
+						NewActionVoteJson(v.Index),
+					) }
+				>
+					{ v.Name }
+				</button>
+			}
+		</div>
+	} else {
+		Wait for { state.Game.Players()[state.PlayerIndex()].Name } to choose the imposter
+	}
+}
+
+templ partialPlayerAction(state GameState, selfPlayerId string) {
+	<div class="flex flex-col gap-4">
+		<h2>
+			Game
+			if state, ok := state.(Expires); ok {
+				•
+				<span data-component-id="expires_timer" data-date={ state.Expires().Format(time.RFC3339Nano) }>00:00</span>
+			}
+		</h2>
+		<div class="flex flex-col gap-2">
+			<p>
+				State:
+				<span class="text-muted italic">
+					switch state.(type) {
+						case *Game:
+							Pre game
+						case *GamePlayerChooseWord:
+							Player choosing word
+						case *GamePlayerTurn:
+							Player turn
+						case *GameImposterWon:
+							Imposter won
+						case *GameCrewmateWon:
+							Crewmates won
+						case *GameVoteTurn:
+							Player voting
+					}
+				</span>
+			</p>
+			if state.GetGame().Imposter().Id != "" {
+				<p>
+					Role:
+					<span class="text-muted italic">
+						if state.GetGame().Imposter().Id == selfPlayerId {
+							Imposter
+						} else {
+							Crewmate
+						}
+					</span>
+				</p>
+			}
+			if state.GetGame().Word() != "" {
+				<p>
+					Word:
+					<span class="text-muted italic">
+						if state.GetGame().Imposter().Id == selfPlayerId {
+							[REDACTED]
+						} else {
+							{ state.GetGame().Word() }
+						}
+					</span>
+				</p>
+			}
+		</div>
+		switch state := state.(type) {
+			case *Game:
+				@stateGame(state)
+			case *GamePlayerChooseWord:
+				@stateGamePlayerChooseWord(state, selfPlayerId)
+			case *GamePlayerTurn:
+				@stateGamePlayerTurn(state, selfPlayerId)
+			case *GameImposterWon:
+				@stateGameImposterWon(state)
+			case *GameCrewmateWon:
+				@stateGameCrewmateWon(state)
+			case *GameVoteTurn:
+				@stateGameVoteTurn(state, selfPlayerId)
+		}
+	</div>
+}
+
+templ playerCard(player Player, turn bool, index int, selfPlayerId string) {
+	<div
+		class={
+			"border p-2 gap-2 flex flex-row items-center",
+			templ.KV("background-primary", turn),
+			templ.KV("border-dotted", player.Id == selfPlayerId),
+		}
+	>
+		<p class={ getPlayerIndexClass(index) }>
+			{ children... }
+		</p>
+		if player.Id == selfPlayerId {
+			<p class="italic font-bold">
+				YOU
+			</p>
+		}
+		<p class="ml-auto">
+			if player.Online {
+				<span class="text-success">online</span>
+			} else {
+				<span class="text-danger">offline</span>
+			}
+		</p>
+		<p class="text-muted">{ fmt.Sprintf("#%d", index) }</p>
+	</div>
+}
+
+templ partialPlayers(state GameState, selfPlayerId string) {
+	<div class="flex flex-col gap-4">
+		<h2>Players</h2>
+		<div class="flex flex-row flex-wrap items-center gap-4 *:min-w-64 *:flex-1">
+			switch state := state.(type) {
+				case PlayerIndex:
+					for i, v := range state.GetGame().Players() {
+						@playerCard(v, state.PlayerIndex() == i, i, selfPlayerId) {
+							{ v.Name }
+						}
+					}
+				default:
+					for i, v := range state.GetGame().Players() {
+						@playerCard(v, false, i, selfPlayerId) {
+							{ v.Name }
+						}
+					}
+			}
+		</div>
+	</div>
+}
