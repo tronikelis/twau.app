@@ -29,6 +29,26 @@ templ pageRoomId(roomId string) {
 				hx-ext="ws"
 				ws-connect={ ui.StringURL(fmt.Sprintf("/rooms/%s/ws", roomId)) }
 			>
+				<h4></h4>
+				<script>
+					const currentScript = document.currentScript;
+					document.addEventListener("DOMContentLoaded", () => {
+						const wsEl = currentScript.parentElement;
+						const infoEl = currentScript.parentElement.firstChild;
+						wsEl.addEventListener("htmx:wsConnecting", () => {
+							infoEl.textContent = "Connecting...";
+							console.log("wsConnecting");
+						});
+						wsEl.addEventListener("htmx:wsOpen", () => {
+							infoEl.textContent = "";
+							console.log("wsOpen");
+						});
+						wsEl.addEventListener("htmx:wsError", (ev) => {
+							infoEl.textContent = "Cant connect to websocket server :("
+							console.log("wsError", ev);
+						});
+					});
+				</script>
 				@game_state.PartialGameState(nil, "")
 			</div>
 		</div>
