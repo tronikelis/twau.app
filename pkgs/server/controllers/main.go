@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"twau.app/pkgs/server/controllers/about"
 	"twau.app/pkgs/server/controllers/home"
 	"twau.app/pkgs/server/controllers/rooms"
 
@@ -10,4 +11,5 @@ import (
 func Register(s *maruchi.Server) {
 	home.Register(s)
 	rooms.Register(s)
+	about.Register(s)
 }

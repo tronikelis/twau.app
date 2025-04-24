@@ -23,7 +23,7 @@ templ pagePlayerCreate(roomId string) {
 templ pageRoomId(roomId string) {
 	@ui.Page() {
 		<div class="flex flex-col gap-0">
-			<h3 class="m-2 truncate">The Word Amog Us • <span class="text-muted">{ roomId }</span></h3>
+			<h3 class="m-2 truncate"><a href="/">The Word Amog Us</a> • <span class="text-muted">{ roomId }</span></h3>
 			<div
 				class="w-full p-12"
 				hx-ext="ws"

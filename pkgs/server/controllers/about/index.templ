@@ -1,0 +1,28 @@
+package about
+
+import "twau.app/pkgs/ui"
+
+templ pageIndex() {
+	@ui.Page() {
+		<div class="w-full flex flex-row items-center justify-center">
+			<div class="container">
+				<h1>About the game</h1>
+				<h3 class="mb-2">Game flow</h3>
+				<p>
+					The game flow is pretty simple. The gist of it is that
+					imposter has to guess the random word, while other players have to guess who is the imposter.
+					<br/>
+					<br/>
+					There are N players and 1 imposter. Each round 1 random player chooses a random word from a list.
+					Then an imposter is randomly chosen, (the player that chose the word can't be the imposter)
+					<br/>
+					<br/>
+					Then players take turns saying related words but not the word itself. If imposter says the correct word, they win
+					<br/>
+					<br/>
+					After a full circle players can vote who is the imposter. If players vote the imposter out they win. Otherwise imposter wins.
+				</p>
+			</div>
+		</div>
+	}
+}
