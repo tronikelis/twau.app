@@ -115,11 +115,13 @@ func wsId(ctx req.ReqContext) error {
 	connCloseChan := make(chan struct{})
 
 	go func() {
+		defer connSafe.Close()
+
 		for {
 			select {
 			case <-connCloseChan:
 				return
-			case <-time.After(time.Second * 30):
+			case <-time.After(time.Second * 10):
 				if err := connSafe.WriteControl(websocket.PingMessage, nil, time.Now().Add(ws.WriteWait)); err != nil {
 					log.Println("write ping", "err", err)
 					return
