@@ -10,7 +10,7 @@ import (
 )
 
 type connWithData struct {
-	conn *websocket.Conn
+	conn *ConnSafe
 	data any
 }
 
@@ -145,7 +145,7 @@ func (self *Room) WriteAll(write func(writer io.Writer) error) error {
 }
 
 // data is optional
-func (self *Room) Add(conn *websocket.Conn, data any) {
+func (self *Room) Add(conn *ConnSafe, data any) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
@@ -155,7 +155,7 @@ func (self *Room) Add(conn *websocket.Conn, data any) {
 	})
 }
 
-func (self *Room) Delete(conn *websocket.Conn) {
+func (self *Room) Delete(conn *ConnSafe) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 

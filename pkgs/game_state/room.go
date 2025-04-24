@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"twau.app/pkgs/ws"
-
-	"github.com/gorilla/websocket"
 )
 
 func checkSamePlayer(game GameState, playerIndex int, playerId string) bool {
@@ -151,14 +149,14 @@ func (self *Room) cleanup() {
 	close(self.stateChangeChan)
 }
 
-func (self *Room) AddPlayer(conn *websocket.Conn, player Player) {
+func (self *Room) AddPlayer(conn *ws.ConnSafe, player Player) {
 	self.wsRoom.Add(conn, player.Id)
 	self.stateNoChan(func(state GameState) {
 		state.GetGame().AddPlayer(player)
 	})
 }
 
-func (self *Room) RemovePlayer(conn *websocket.Conn, playerId string) {
+func (self *Room) RemovePlayer(conn *ws.ConnSafe, playerId string) {
 	self.wsRoom.Delete(conn)
 	self.stateNoChan(func(state GameState) {
 		if game, ok := state.(*Game); ok {

@@ -3,9 +3,11 @@ package rooms
 import (
 	"fmt"
 	"log"
+	"net/http"
 
 	"twau.app/pkgs/game_state"
 	"twau.app/pkgs/server/req"
+	"twau.app/pkgs/ws"
 
 	"github.com/gorilla/websocket"
 )
@@ -51,11 +53,15 @@ func getId(ctx req.ReqContext) error {
 	return pageRoomId(roomId).Render(ctx.Context(), ctx.Writer())
 }
 
-var wsUpgrader = websocket.Upgrader{}
+var wsUpgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 func handleWsId(
 	ctx req.ReqContext,
-	conn *websocket.Conn,
+	conn *ws.ConnSafe,
 	player req.Player,
 	room *game_state.Room,
 	roomId string,
@@ -100,7 +106,7 @@ func wsId(ctx req.ReqContext) error {
 		return req.ErrRoomDoesNotExist
 	}
 
-	socket, err := wsUpgrader.Upgrade(ctx.Writer(), ctx.Req(), nil)
+	conn, err := wsUpgrader.Upgrade(ctx.Writer(), ctx.Req(), nil)
 	if err != nil {
 		return err
 	}
@@ -112,7 +118,7 @@ func wsId(ctx req.ReqContext) error {
 			}
 		}()
 
-		if err := handleWsId(ctx, socket, player, room, roomId); err != nil {
+		if err := handleWsId(ctx, ws.NewConnSafe(conn), player, room, roomId); err != nil {
 			log.Println("wsId", "err", err)
 		}
 	}()
