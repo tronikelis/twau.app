@@ -134,13 +134,12 @@ func wsId(ctx req.ReqContext) error {
 				log.Println("wsId recover", "err", err)
 			}
 		}()
+		defer connSafe.Close()
+		defer close(connCloseChan)
 
 		if err := handleWsId(ctx, connSafe, player, room, roomId); err != nil {
 			log.Println("wsId", "err", err)
 		}
-
-		connSafe.Close()
-		close(connCloseChan)
 	}()
 
 	return nil
