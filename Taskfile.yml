@@ -37,6 +37,7 @@ tasks:
     env:
       PORT: 3001
       SECRET_KEY: secret
+      PRODUCTION: false
 
 
   build/ts:

@@ -16,8 +16,9 @@ import (
 )
 
 type Env struct {
-	Port   int    `env:"PORT"`
-	Secret []byte `env:"SECRET_KEY"`
+	Port       int    `env:"PORT"`
+	Secret     []byte `env:"SECRET_KEY"`
+	Production bool   `env:"PRODUCTION"`
 }
 
 func NewEnv() (*Env, error) {
@@ -73,7 +74,11 @@ func main() {
 
 	errChan := make(chan error)
 	go func() {
-		errChan <- http.ListenAndServe(fmt.Sprintf("localhost:%d", env.Port), server.ServeMux())
+		host := "localhost"
+		if env.Production {
+			host = "0.0.0.0"
+		}
+		errChan <- http.ListenAndServe(fmt.Sprintf("%s:%d", host, env.Port), server.ServeMux())
 	}()
 
 	log.Println("listening on", env.Port)

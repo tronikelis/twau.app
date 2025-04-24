@@ -1,0 +1,32 @@
+name: deploy
+
+on:
+  release:
+    types:
+      - created
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: save ssh key
+        run: |
+          mkdir -p ~/.ssh/
+          touch ~/.ssh/key
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/key
+          chmod 400 ~/.ssh/key
+
+      - name: build image
+        run: |
+          docker image build --tag dokku/twau.app:${{ github.sha }} .
+
+      - name: deploy image
+        run: |
+          ssh-keyscan ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          docker image save dokku/twau.app:${{ github.sha }} | ssh dokku@${{ secrets.SERVER_IP }} -i ~/.ssh/key git:load-image twau.app dokku/twau.app:${{ github.sha }}
+
+      - name: cleanup ssh
+        run: rm -rf ~/.ssh
