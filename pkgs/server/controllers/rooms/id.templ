@@ -35,6 +35,9 @@ templ pageRoomId(roomId string) {
 					document.addEventListener("DOMContentLoaded", () => {
 						const wsEl = currentScript.parentElement;
 						const infoEl = currentScript.parentElement.firstChild;
+
+						infoEl.textContent = "Connecting...";
+
 						wsEl.addEventListener("htmx:wsConnecting", () => {
 							infoEl.textContent = "Connecting...";
 							console.log("wsConnecting");
