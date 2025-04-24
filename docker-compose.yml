@@ -1,0 +1,7 @@
+services:
+  nginx_main:
+    image: nginx
+    network_mode: host
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf
+

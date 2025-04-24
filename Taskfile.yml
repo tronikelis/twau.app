@@ -12,10 +12,13 @@ tasks:
           ARGS: "--watch"
       - task: dev/templ
       - task: dev/server
+      - task: dev/docker
       - task: build/ts
         vars:
           ARGS: "--watch"
 
+  dev/docker:
+    cmd: docker-compose up -d
 
   build/tailwind:
     cmd: npx -y @tailwindcss/cli -i ./main.css -o ./static/css/tw.css --minify {{.ARGS}} {{.CLI_ARGS}}
@@ -32,7 +35,7 @@ tasks:
       --build.stop_on_error "true" \
       --misc.clean_on_exit true
     env:
-      PORT: 3000
+      PORT: 3001
       SECRET_KEY: secret
 
 

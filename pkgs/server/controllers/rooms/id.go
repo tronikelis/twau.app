@@ -71,7 +71,16 @@ func handleWsId(
 	defer room.RemovePlayer(conn, player.Id)
 	defer conn.Close()
 
-	return room.GameLoop(conn, player.Id)
+	for {
+		_, bytes, err := conn.ReadMessage()
+		if err != nil {
+			return err
+		}
+
+		if err := room.GameLoop(bytes, player.Id); err != nil {
+			return err
+		}
+	}
 }
 
 func wsId(ctx req.ReqContext) error {
