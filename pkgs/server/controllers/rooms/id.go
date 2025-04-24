@@ -76,7 +76,6 @@ func handleWsId(
 		}
 	})
 	defer room.RemovePlayer(conn, player.Id)
-	defer conn.Close()
 
 	for {
 		_, bytes, err := conn.ReadMessage()
@@ -112,16 +111,20 @@ func wsId(ctx req.ReqContext) error {
 		return err
 	}
 	connSafe := ws.NewConnSafe(conn)
+	// maybe this logic should be in NewConnSafe?
+	connCloseChan := make(chan struct{})
 
 	go func() {
-		defer connSafe.Close()
-
 		for {
-			if err := connSafe.WriteControl(websocket.PingMessage, nil, time.Now().Add(ws.WriteWait)); err != nil {
-				log.Println("write ping", "err", err)
+			select {
+			case <-connCloseChan:
 				return
+			case <-time.After(time.Second * 30):
+				if err := connSafe.WriteControl(websocket.PingMessage, nil, time.Now().Add(ws.WriteWait)); err != nil {
+					log.Println("write ping", "err", err)
+					return
+				}
 			}
-			<-time.After(time.Second * 30)
 		}
 	}()
 
@@ -135,6 +138,9 @@ func wsId(ctx req.ReqContext) error {
 		if err := handleWsId(ctx, connSafe, player, room, roomId); err != nil {
 			log.Println("wsId", "err", err)
 		}
+
+		connSafe.Close()
+		close(connCloseChan)
 	}()
 
 	return nil
