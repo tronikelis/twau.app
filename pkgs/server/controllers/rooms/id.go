@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"twau.app/pkgs/game_state"
 	"twau.app/pkgs/server/req"
@@ -110,6 +111,19 @@ func wsId(ctx req.ReqContext) error {
 	if err != nil {
 		return err
 	}
+	connSafe := ws.NewConnSafe(conn)
+
+	go func() {
+		defer connSafe.Close()
+
+		for {
+			if err := connSafe.WriteControl(websocket.PingMessage, nil, time.Now().Add(ws.WriteWait)); err != nil {
+				log.Println("write ping", "err", err)
+				return
+			}
+			<-time.After(time.Second * 30)
+		}
+	}()
 
 	go func() {
 		defer func() {
@@ -118,7 +132,7 @@ func wsId(ctx req.ReqContext) error {
 			}
 		}()
 
-		if err := handleWsId(ctx, ws.NewConnSafe(conn), player, room, roomId); err != nil {
+		if err := handleWsId(ctx, connSafe, player, room, roomId); err != nil {
 			log.Println("wsId", "err", err)
 		}
 	}()
