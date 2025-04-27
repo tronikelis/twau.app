@@ -3,20 +3,6 @@ package game_state
 import "fmt"
 import "time"
 
-var playerIndexClass = []string{
-	"player-red",
-	"player-green",
-	"player-blue",
-	"player-brown",
-	"player-pink",
-	"player-purple",
-	"player-black",
-}
-
-func getPlayerIndexClass(index int) string {
-	return playerIndexClass[index%len(playerIndexClass)]
-}
-
 templ PartialGameState(state GameState, selfPlayerId string) {
 	<div id="game_state" class="grid grid-cols-6 gap-8" hx-swap-oob="outerHTML">
 		if state != nil {
@@ -43,8 +29,8 @@ templ partialChat(state GameState) {
 						v := state.GetGame().Synonyms()[i]
 					}}
 					<div class="flex flex-col gap-1">
-						<p class={ "font-bold", getPlayerIndexClass(v.PlayerIndex) }>
-							{ state.GetGame().Players()[v.PlayerIndex].Name }:
+						<p class={ "font-bold", state.GetGame().Players().PlayerOrPanic(v.PlayerId).CssClass }>
+							{ state.GetGame().players.PlayerOrPanic(v.PlayerId).Name }:
 						</p>
 						<p>
 							{ v.Synonym }
@@ -56,17 +42,17 @@ templ partialChat(state GameState) {
 	</div>
 }
 
-templ playerPicks(picks []PlayerPicked) {
+templ playerPicks(picks []*PlayerPicked) {
 	<div class="flex flex-row flex-wrap gap-4 *:flex-1 *:min-w-24">
 		for _, v := range picks {
 			<div class="border p-2 flex flex-col gap-1">
 				<p class="font-bold mb-1">
-					<span class={ getPlayerIndexClass(v.Player.Index) }>{ v.Player.Name }</span>
+					<span class={ v.Player.CssClass }>{ v.Player.Name }</span>
 					↓
 				</p>
 				<div class="flex flex-row gap-1 flex-wrap">
 					for i, x := range v.PickedBy {
-						<p class={ getPlayerIndexClass(x.Index) }>
+						<p class={ x.CssClass }>
 							{ x.Name }
 							if i != len(v.PickedBy)-1 {
 								{ " •" }
@@ -93,7 +79,7 @@ templ stateGame(state *Game) {
 }
 
 templ stateGamePlayerChooseWord(state *GamePlayerChooseWord, selfPlayerId string) {
-	if state.Players()[state.PlayerIndex2()].Id == selfPlayerId {
+	if state.Player2().Id == selfPlayerId {
 		for i, v := range state.FromWords() {
 			<button
 				class="w-full"
@@ -114,7 +100,7 @@ templ stateGamePlayerChooseWord(state *GamePlayerChooseWord, selfPlayerId string
 }
 
 templ stateGamePlayerTurn(state *GamePlayerTurn, selfPlayerId string) {
-	if state.Players()[state.PlayerIndex()].Id == selfPlayerId {
+	if state.Player().Id == selfPlayerId {
 		<p>It's your turn, what do you want to do?</p>
 		<div class="flex flex-col gap-8">
 			<form
@@ -149,7 +135,7 @@ templ stateGamePlayerTurn(state *GamePlayerTurn, selfPlayerId string) {
 		</div>
 	} else {
 		<p>
-			Wait for { state.Players()[state.PlayerIndex()].Name } to
+			Wait for { state.Player().Name } to
 			make his decision
 		</p>
 	}
@@ -162,7 +148,7 @@ templ stateGameImposterWon(state *GameImposterWon) {
 	@playerPicks(state.Picks())
 	<p>
 		Imposter was
-		<span class={ "font-bold italic", getPlayerIndexClass(state.ImposterIndex()) }>
+		<span class={ "font-bold italic", state.Imposter().CssClass }>
 			{ state.Imposter().Name }
 		</span>
 	</p>
@@ -189,7 +175,7 @@ templ stateGameCrewmateWon(state *GameCrewmateWon) {
 	@playerPicks(state.Picks())
 	<p>
 		Imposter was
-		<span class={ "font-bold italic", getPlayerIndexClass(state.ImposterIndex()) }>
+		<span class={ "font-bold italic", state.Imposter().CssClass }>
 			{ state.Imposter().Name }
 		</span>
 	</p>
@@ -213,21 +199,21 @@ templ stateGameVoteTurn(state *GameVoteTurn, selfPlayerId string) {
 	<h3>Votes</h3>
 	<h4>
 		Initialized by
-		<span class={ getPlayerIndexClass(state.InitPlayerIndex()) }>
-			{ state.GetGame().Players()[state.InitPlayerIndex()].Name }
+		<span class={ state.GetGame().Players().PlayerOrPanic(state.InitPlayerId()).CssClass }>
+			{ state.GetGame().Players().PlayerOrPanic(state.InitPlayerId()).Name }
 		</span>
 	</h4>
 	@playerPicks(state.Picks())
-	if state.Game.Players()[state.PlayerIndex()].Id == selfPlayerId {
+	if state.Player().Id == selfPlayerId {
 		<h4 class="mt-2">Who is the imposter?</h4>
 		<div class="flex flex-row gap-4 flex-wrap">
-			for _, v := range state.Players(selfPlayerId) {
+			for _, v := range state.Candidates(selfPlayerId) {
 				<button
-					class={ "w-full", getPlayerIndexClass(v.Index) }
+					class={ "w-full", v.CssClass }
 					type="button"
 					ws-send
 					hx-vals={ SerializeJsonPanic(
-						NewActionVoteJson(v.Index),
+						NewActionVoteJson(v.Id),
 					) }
 				>
 					{ v.Name }
@@ -235,7 +221,7 @@ templ stateGameVoteTurn(state *GameVoteTurn, selfPlayerId string) {
 			}
 		</div>
 	} else {
-		Wait for { state.Game.Players()[state.PlayerIndex()].Name } to choose the imposter
+		Wait for { state.Player().Name } to choose the imposter
 	}
 }
 
@@ -318,7 +304,7 @@ templ playerCard(player Player, turn bool, index int, selfPlayerId string) {
 			templ.KV("border-dotted", player.Id == selfPlayerId),
 		}
 	>
-		<p class={ getPlayerIndexClass(index) }>
+		<p class={ player.CssClass }>
 			{ children... }
 		</p>
 		if player.Id == selfPlayerId {
@@ -342,14 +328,14 @@ templ partialPlayers(state GameState, selfPlayerId string) {
 		<h2>Players</h2>
 		<div class="flex flex-row flex-wrap items-center gap-4 *:min-w-64 *:flex-1">
 			switch state := state.(type) {
-				case PlayerIndex:
-					for i, v := range state.GetGame().Players() {
-						@playerCard(v, state.PlayerIndex() == i, i, selfPlayerId) {
+				case PlayerTurn:
+					for i, v := range state.GetGame().Players().Players() {
+						@playerCard(v, state.Player().Id == v.Id, i, selfPlayerId) {
 							{ v.Name }
 						}
 					}
 				default:
-					for i, v := range state.GetGame().Players() {
+					for i, v := range state.GetGame().Players().Players() {
 						@playerCard(v, false, i, selfPlayerId) {
 							{ v.Name }
 						}

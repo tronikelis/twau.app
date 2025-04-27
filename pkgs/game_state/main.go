@@ -13,106 +13,63 @@ type GameState interface {
 	GetGame() *Game
 }
 
-type PlayerIndex interface {
+type PlayerTurn interface {
 	GameState
-	PlayerIndex() int
-}
-
-type PlayerWithIndex struct {
-	Player
-	Index int
+	Player() Player
 }
 
 type Expires interface {
 	Expires() time.Time
 }
 
-type Player struct {
-	Id     string
-	Name   string
-	Online bool
-}
-
-func NewPlayer(id string, name string) Player {
-	return Player{Id: id, Name: name, Online: true}
-}
-
 type PlayerSynonym struct {
-	Synonym     string
-	PlayerIndex int
+	Synonym  string
+	PlayerId string
 }
 
-func newPlayerSynonym(synonym string, playerIndex int) PlayerSynonym {
+func newPlayerSynonym(synonym string, playerId string) PlayerSynonym {
 	return PlayerSynonym{
-		Synonym:     synonym,
-		PlayerIndex: playerIndex,
+		Synonym:  synonym,
+		PlayerId: playerId,
 	}
 }
 
 type Game struct {
+	players   *Players
 	randomInt random.RandomIntNotSame
 	word      string
 	synonyms  []PlayerSynonym
-	players   []Player
 	// ඞ
-	imposterIndex int
+	imposterId string
 }
 
 func NewGame() *Game {
 	return &Game{
-		imposterIndex: -1,
-		randomInt:     random.NewRandomIntNotSame(3),
+		randomInt: random.NewRandomIntNotSame(3),
+		players:   newPlayers(),
 	}
+}
+
+func (self *Game) Players() *Players {
+	return self.players
 }
 
 func (self *Game) Word() string {
 	return self.word
 }
 
-func (self *Game) ImposterIndex() int {
-	return self.imposterIndex
+func (self *Game) ImposterId() string {
+	return self.imposterId
 }
 
+// returns 0 value if missing
 func (self *Game) Imposter() Player {
-	if self.imposterIndex == -1 {
-		return Player{}
-	}
-
-	return self.players[self.imposterIndex]
+	player, _ := self.players.Player(self.imposterId)
+	return player
 }
 
 func (self *Game) Synonyms() []PlayerSynonym {
 	return self.synonyms
-}
-
-func (self *Game) DisconnectPlayer(id string) {
-	for i, v := range self.players {
-		if v.Id == id {
-			v.Online = false
-			self.players[i] = v
-			break
-		}
-	}
-}
-
-func (self *Game) PlayersOnline() int {
-	count := 0
-	for _, v := range self.players {
-		if v.Online {
-			count++
-		}
-	}
-	return count
-}
-
-func (self *Game) RemovePlayer(id string) {
-	self.players = slices.DeleteFunc(self.players, func(player Player) bool {
-		return player.Id == id
-	})
-}
-
-func (self *Game) Players() []Player {
-	return self.players
 }
 
 func (self *Game) GetGame() *Game {
@@ -123,97 +80,99 @@ func (self *Game) Start() *GamePlayerChooseWord {
 	// clean garbanzo
 	self.word = ""
 	self.synonyms = nil
-	self.players = slices.DeleteFunc(self.players, func(v Player) bool {
-		return !v.Online
-	})
+	self.players.ClearOffline()
 
-	self.imposterIndex = self.randomInt.IntN(len(self.players))
+	self.imposterId = self.players.Index(self.randomInt.IntN(self.players.Len())).Id
 
-	return newGamePlayerChooseWord(self, self.imposterIndex)
-}
-
-// idempotent
-func (self *Game) AddPlayer(player Player) {
-	index := slices.IndexFunc(self.players, func(v Player) bool {
-		return v.Id == player.Id
-	})
-
-	if index != -1 {
-		self.players[index] = player
-		return
-	}
-
-	self.players = append(self.players, player)
+	return newGamePlayerChooseWord(self)
 }
 
 type playerVotePick struct {
-	playerIndex int
-	pickedIndex int
+	playerId string
+	pickedId string
 }
 
 type GameVoteTurn struct {
 	*Game
-	picks           []playerVotePick
-	playerIndex     int
-	initPlayerIndex int
+	picks        []playerVotePick
+	playerId     string
+	initPlayerId string
+	candidates   *Players
 }
 
-func newGameVoteTurn(game *Game, playerIndex int) *GameVoteTurn {
+func newGameVoteTurn(game *Game, playerId string, candidates *Players) *GameVoteTurn {
 	return &GameVoteTurn{
-		Game:            game,
-		playerIndex:     playerIndex,
-		initPlayerIndex: playerIndex,
+		Game:         game,
+		playerId:     playerId,
+		initPlayerId: playerId,
+		candidates:   candidates,
 	}
 }
 
-func (self *GameVoteTurn) PlayerIndex() int {
-	return self.playerIndex
+func (self *GameVoteTurn) Player() Player {
+	return self.players.PlayerOrPanic(self.playerId)
 }
 
-func (self *GameVoteTurn) InitPlayerIndex() int {
-	return self.initPlayerIndex
+func (self *GameVoteTurn) InitPlayerId() string {
+	return self.initPlayerId
 }
 
 // returns new game state
-func (self *GameVoteTurn) Vote(playerIndex int) (GameState, bool) {
+func (self *GameVoteTurn) Vote(playerId string) (GameState, bool) {
 	self.picks = append(self.picks, playerVotePick{
-		playerIndex: self.playerIndex,
-		pickedIndex: playerIndex,
+		playerId: self.playerId,
+		pickedId: playerId,
 	})
-	self.playerIndex = (self.playerIndex + 1) % len(self.players)
+	self.playerId = self.players.NextFrom(self.playerId).Id
 
-	if self.playerIndex == self.initPlayerIndex {
-		picks := map[int]int{}
+	if self.playerId == self.initPlayerId {
+		picks := map[string]int{}
 
 		for _, v := range self.picks {
-			picks[v.pickedIndex]++
+			picks[v.pickedId]++
 		}
 
 		highestCount := 0
-		pickedPlayerIndex := 0
-
-		for k, v := range picks {
+		for _, v := range picks {
 			if v > highestCount {
 				highestCount = v
-				pickedPlayerIndex = k
 			}
 		}
 
-		dupHighestCount := 0
-		for _, v := range picks {
+		var votedPlayerIds []string
+		for k, v := range picks {
 			if v == highestCount {
-				dupHighestCount++
+				votedPlayerIds = append(votedPlayerIds, k)
 			}
 		}
 
-		// means multiple players have the highest vote count
-		// in other words a tie
-		if dupHighestCount != 1 {
-			return newGameVoteTurn(self.Game, self.initPlayerIndex), true
+		// return tied players
+		if len(votedPlayerIds) != 1 {
+			// if imposter is not part of this list, means he won
+			imposterInList := false
+			for _, v := range votedPlayerIds {
+				if self.Imposter().Id == v {
+					imposterInList = true
+				}
+			}
+			if !imposterInList {
+				return newGameImposterWon(self.Game, self), true
+			}
+
+			candidates := newPlayers()
+			for _, v := range votedPlayerIds {
+				candidates.Add(self.players.PlayerOrPanic(v))
+			}
+			return newGameVoteTurn(self.Game, self.playerId, candidates), true
 		}
+
+		votedPlayerId := votedPlayerIds[0]
+
+		voted := self.players.PlayerOrPanic(votedPlayerId)
+		imposter := self.players.PlayerOrPanic(self.imposterId)
 
 		// if imposter was picked, crewmates won
-		if self.players[pickedPlayerIndex].Id == self.players[self.imposterIndex].Id {
+		if voted.Id == imposter.Id {
 			return newGameCrewmateWon(self.Game, self), true
 		}
 
@@ -224,50 +183,42 @@ func (self *GameVoteTurn) Vote(playerIndex int) (GameState, bool) {
 	return nil, false
 }
 
-func (self *GameVoteTurn) Players(selfPlayerId string) []PlayerWithIndex {
-	players := make([]PlayerWithIndex, 0, len(self.players)-1)
-	for i, v := range self.players {
-		// skip adding self as you can't vote yourself out
-		if v.Id == selfPlayerId {
-			continue
-		}
-
-		players = append(players, PlayerWithIndex{
-			Player: v,
-			Index:  i,
-		})
-	}
+func (self *GameVoteTurn) Candidates(selfPlayerId string) []Player {
+	players := self.candidates.Players()
+	players = slices.DeleteFunc(players, func(a Player) bool {
+		return a.Id == selfPlayerId
+	})
 	return players
 }
 
 type PlayerPicked struct {
-	Player   PlayerWithIndex
-	PickedBy []PlayerWithIndex
+	Player   Player
+	PickedBy []Player
 }
 
-func (self *GameVoteTurn) Picks() []PlayerPicked {
-	picks := make([]PlayerPicked, len(self.players))
+func (self *GameVoteTurn) Picks() []*PlayerPicked {
+	candidates := self.candidates.Players()
+
+	picks := make([]*PlayerPicked, len(candidates))
+	picksMap := make(map[string]*PlayerPicked, len(candidates))
+
 	for i, v := range picks {
-		v.Player = PlayerWithIndex{
-			Player: self.players[i],
-			Index:  i,
-		}
+		v = &PlayerPicked{}
+		v.Player = candidates[i]
+
+		picksMap[v.Player.Id] = v
 		picks[i] = v
 	}
 
 	for _, v := range self.picks {
-		prev := picks[v.pickedIndex]
+		prev := picksMap[v.pickedId]
 		prev.PickedBy = append(
 			prev.PickedBy,
-			PlayerWithIndex{
-				Player: self.players[v.playerIndex],
-				Index:  v.playerIndex,
-			},
+			self.Game.players.PlayerOrPanic(v.playerId),
 		)
-		picks[v.pickedIndex] = prev
 	}
 
-	slices.SortFunc(picks, func(a PlayerPicked, b PlayerPicked) int {
+	slices.SortFunc(picks, func(a *PlayerPicked, b *PlayerPicked) int {
 		return len(b.PickedBy) - len(a.PickedBy)
 	})
 
@@ -276,18 +227,18 @@ func (self *GameVoteTurn) Picks() []PlayerPicked {
 
 type GamePlayerTurn struct {
 	*Game
-	expires         time.Time
-	playerIndex     int
-	initPlayerIndex int
-	fullCircle      bool
+	expires      time.Time
+	playerId     string
+	initPlayerId string
+	fullCircle   bool
 }
 
-func newGamePlayerTurn(game *Game, playerIndex int) *GamePlayerTurn {
+func newGamePlayerTurn(game *Game, playerId string) *GamePlayerTurn {
 	return &GamePlayerTurn{
-		Game:            game,
-		playerIndex:     playerIndex,
-		initPlayerIndex: playerIndex,
-		expires:         time.Now().Add(PlayerTurnDuration),
+		Game:         game,
+		playerId:     playerId,
+		initPlayerId: playerId,
+		expires:      time.Now().Add(PlayerTurnDuration),
 	}
 }
 
@@ -300,11 +251,11 @@ func (self *GamePlayerTurn) FullCircle() bool {
 }
 
 func (self *GamePlayerTurn) InitVote() *GameVoteTurn {
-	return newGameVoteTurn(self.Game, self.playerIndex)
+	return newGameVoteTurn(self.Game, self.playerId, self.players)
 }
 
-func (self *GamePlayerTurn) PlayerIndex() int {
-	return self.playerIndex
+func (self *GamePlayerTurn) Player() Player {
+	return self.players.PlayerOrPanic(self.playerId)
 }
 
 // records player synonym and passes turn to next
@@ -312,17 +263,19 @@ func (self *GamePlayerTurn) PlayerIndex() int {
 func (self *GamePlayerTurn) SaySynonym(synonym string) (GameState, bool) {
 	self.synonyms = append(
 		self.synonyms,
-		newPlayerSynonym(synonym, self.playerIndex),
+		newPlayerSynonym(synonym, self.playerId),
 	)
 
+	imposter := self.players.PlayerOrPanic(self.imposterId)
+	current := self.players.PlayerOrPanic(self.playerId)
+
 	// imposter could have won by saying the same word
-	if synonym == self.word && self.players[self.playerIndex].Id == self.players[self.imposterIndex].Id {
+	if synonym == self.word && imposter.Id == current.Id {
 		return newGameImposterWon(self.Game, nil), true
 	}
 
-	self.playerIndex = (self.playerIndex + 1) % len(self.players)
-
-	if self.playerIndex == self.initPlayerIndex {
+	self.playerId = self.players.NextFrom(self.playerId).Id
+	if self.playerId == self.initPlayerId {
 		self.fullCircle = true
 	}
 
@@ -333,21 +286,22 @@ func (self *GamePlayerTurn) SaySynonym(synonym string) (GameState, bool) {
 
 type GamePlayerChooseWord struct {
 	*Game
-	playerIndex int
-	fromWords   []string
+	playerId  string
+	fromWords []string
 }
 
-func newGamePlayerChooseWord(game *Game, imposterIndex int) *GamePlayerChooseWord {
-	playerIndex := game.randomInt.IntN(len(game.players))
+func newGamePlayerChooseWord(game *Game) *GamePlayerChooseWord {
+	player := game.players.Index(game.randomInt.IntN(game.players.Len()))
+
 	// making imposter choose the word just does not make sense
-	if playerIndex == imposterIndex {
-		playerIndex = (playerIndex + 1) % len(game.players)
+	if player.Id == game.imposterId {
+		player = game.players.NextFrom(player.Id)
 	}
 
 	return &GamePlayerChooseWord{
-		Game:        game,
-		fromWords:   allWords.randomN(4),
-		playerIndex: playerIndex,
+		Game:      game,
+		fromWords: allWords.randomN(4),
+		playerId:  player.Id,
 	}
 }
 
@@ -355,8 +309,8 @@ func (self *GamePlayerChooseWord) FromWords() []string {
 	return self.fromWords
 }
 
-func (self *GamePlayerChooseWord) PlayerIndex2() int {
-	return self.playerIndex
+func (self *GamePlayerChooseWord) Player2() Player {
+	return self.players.PlayerOrPanic(self.playerId)
 }
 
 func (self *GamePlayerChooseWord) Choose(index int) *GamePlayerTurn {
@@ -365,8 +319,8 @@ func (self *GamePlayerChooseWord) Choose(index int) *GamePlayerTurn {
 	}
 
 	self.word = self.fromWords[index]
-	playerIndex := self.randomInt.IntN(len(self.players))
-	return newGamePlayerTurn(self.Game, playerIndex)
+	player := self.players.Index(self.randomInt.IntN(self.players.Len()))
+	return newGamePlayerTurn(self.Game, player.Id)
 }
 
 type GameCrewmateWon struct {
@@ -378,7 +332,7 @@ func newGameCrewmateWon(game *Game, voteTurn *GameVoteTurn) *GameCrewmateWon {
 	return &GameCrewmateWon{Game: game, voteTurn: voteTurn}
 }
 
-func (self *GameCrewmateWon) Picks() []PlayerPicked {
+func (self *GameCrewmateWon) Picks() []*PlayerPicked {
 	if self.voteTurn == nil {
 		return nil
 	}
@@ -391,7 +345,7 @@ type GameImposterWon struct {
 	voteTurn *GameVoteTurn
 }
 
-func (self *GameImposterWon) Picks() []PlayerPicked {
+func (self *GameImposterWon) Picks() []*PlayerPicked {
 	if self.voteTurn == nil {
 		return nil
 	}

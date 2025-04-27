@@ -11,10 +11,6 @@ import (
 	"twau.app/pkgs/ws"
 )
 
-func checkSamePlayer(game GameState, playerIndex int, playerId string) bool {
-	return game.GetGame().Players()[playerIndex].Id == playerId
-}
-
 type Room struct {
 	wsRoom          *ws.Room
 	unsafeState     GameState
@@ -59,7 +55,7 @@ func (self *Room) GameLoop(bytes []byte, playerId string) error {
 		self.StateRef(func(state *GameState) {
 			game := (*state).(*GamePlayerChooseWord)
 
-			if !checkSamePlayer(game, game.PlayerIndex2(), playerId) {
+			if game.Player2().Id != playerId {
 				return
 			}
 
@@ -74,7 +70,7 @@ func (self *Room) GameLoop(bytes []byte, playerId string) error {
 		self.StateRef(func(state *GameState) {
 			game := (*state).(*GamePlayerTurn)
 
-			if !checkSamePlayer(game, game.PlayerIndex(), playerId) {
+			if game.Player().Id != playerId {
 				return
 			}
 
@@ -86,7 +82,7 @@ func (self *Room) GameLoop(bytes []byte, playerId string) error {
 		self.StateRef(func(state *GameState) {
 			game := (*state).(*GamePlayerTurn)
 
-			if !checkSamePlayer(game, game.PlayerIndex(), playerId) {
+			if game.Player().Id != playerId {
 				return
 			}
 
@@ -105,11 +101,11 @@ func (self *Room) GameLoop(bytes []byte, playerId string) error {
 		self.StateRef(func(state *GameState) {
 			game := (*state).(*GameVoteTurn)
 
-			if !checkSamePlayer(game, game.PlayerIndex(), playerId) {
+			if game.Player().Id != playerId {
 				return
 			}
 
-			if newState, ok := game.Vote(action.PlayerIndex); ok {
+			if newState, ok := game.Vote(action.PlayerId); ok {
 				*state = newState
 			}
 		})
@@ -152,7 +148,7 @@ func (self *Room) cleanup() {
 func (self *Room) AddPlayer(conn *ws.ConnSafe, player Player) {
 	self.wsRoom.Add(conn, player.Id)
 	self.stateNoChan(func(state GameState) {
-		state.GetGame().AddPlayer(player)
+		state.GetGame().Players().Add(player)
 	})
 }
 
@@ -160,9 +156,9 @@ func (self *Room) RemovePlayer(conn *ws.ConnSafe, playerId string) {
 	self.wsRoom.Delete(conn)
 	self.stateNoChan(func(state GameState) {
 		if game, ok := state.(*Game); ok {
-			game.RemovePlayer(playerId)
+			game.Players().Remove(playerId)
 		} else {
-			state.GetGame().DisconnectPlayer(playerId)
+			state.GetGame().Players().Disconnect(playerId)
 		}
 	})
 }
