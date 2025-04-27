@@ -2,6 +2,7 @@ package req
 
 import (
 	"crypto/subtle"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"net/http"
@@ -26,6 +27,8 @@ type Player struct {
 }
 
 func (self ReqContext) SetPlayer(name string) error {
+	name = base64.StdEncoding.EncodeToString([]byte(name))
+
 	playerId, err := random.RandomHex(random.LengthPlayerId)
 
 	playerIdSigned, err := auth.SignStringHex(playerId, self.SecretKey)
@@ -43,6 +46,17 @@ func (self ReqContext) SetPlayer(name string) error {
 	http.SetCookie(self.Writer(), &playerNameCookie)
 
 	return nil
+}
+
+func (self ReqContext) ClearPlayer() {
+	playerNameCookie := CookiePlayerName
+	playerNameCookie.MaxAge = -1
+
+	playerIdCookie := CookiePlayerId
+	playerIdCookie.MaxAge = -1
+
+	http.SetCookie(self.Writer(), &playerNameCookie)
+	http.SetCookie(self.Writer(), &playerIdCookie)
 }
 
 func (self ReqContext) Player() (Player, error) {
@@ -70,9 +84,14 @@ func (self ReqContext) Player() (Player, error) {
 		return Player{}, fmt.Errorf("unauthorized player id cookie")
 	}
 
+	name, err := base64.StdEncoding.DecodeString(playerNameCookie.Value)
+	if err != nil {
+		return Player{}, err
+	}
+
 	return Player{
 		Id:   playerId,
-		Name: playerNameCookie.Value,
+		Name: string(name),
 	}, nil
 }
 
