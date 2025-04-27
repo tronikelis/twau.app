@@ -199,6 +199,19 @@ func (self *GameVoteTurn) Vote(playerIndex int) (GameState, bool) {
 			}
 		}
 
+		dupHighestCount := 0
+		for _, v := range picks {
+			if v == highestCount {
+				dupHighestCount++
+			}
+		}
+
+		// means multiple players have the highest vote count
+		// in other words a tie
+		if dupHighestCount != 1 {
+			return newGameVoteTurn(self.Game, self.initPlayerIndex), true
+		}
+
 		// if imposter was picked, crewmates won
 		if self.players[pickedPlayerIndex].Id == self.players[self.imposterIndex].Id {
 			return newGameCrewmateWon(self.Game, self), true
