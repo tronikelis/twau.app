@@ -84,7 +84,7 @@ func (self *Game) Start() *GamePlayerChooseWord {
 
 	self.imposterId = self.players.Index(self.randomInt.IntN(self.players.Len())).Id
 
-	return newGamePlayerChooseWord(self, self.imposterId)
+	return newGamePlayerChooseWord(self)
 }
 
 type playerVotePick struct {
@@ -279,7 +279,7 @@ type GamePlayerChooseWord struct {
 	fromWords []string
 }
 
-func newGamePlayerChooseWord(game *Game, imposterId string) *GamePlayerChooseWord {
+func newGamePlayerChooseWord(game *Game) *GamePlayerChooseWord {
 	player := game.players.Index(game.randomInt.IntN(game.players.Len()))
 
 	// making imposter choose the word just does not make sense
