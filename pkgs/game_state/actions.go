@@ -68,12 +68,12 @@ func NewActionInitVoteJson() ActionInitVoteJson {
 
 type ActionVoteJson struct {
 	Action
-	PlayerIndex int `json:"player_index"`
+	PlayerId string `json:"player_id"`
 }
 
-func NewActionVoteJson(playerIndex int) ActionVoteJson {
+func NewActionVoteJson(playerId string) ActionVoteJson {
 	return ActionVoteJson{
-		Action:      Action{ActionVote},
-		PlayerIndex: playerIndex,
+		Action:   Action{ActionVote},
+		PlayerId: playerId,
 	}
 }

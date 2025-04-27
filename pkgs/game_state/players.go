@@ -102,6 +102,7 @@ func (self Players) PlayerOrPanic(id string) Player {
 	return p
 }
 
+// creates a new slice
 func (self Players) Players() []Player {
 	players := make([]Player, 0, self.Len())
 

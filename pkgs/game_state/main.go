@@ -173,7 +173,11 @@ func (self *GameVoteTurn) Vote(playerId string) (GameState, bool) {
 }
 
 func (self *GameVoteTurn) Candidates(selfPlayerId string) []Player {
-	return self.candidates.Players()
+	players := self.candidates.Players()
+	players = slices.DeleteFunc(players, func(a Player) bool {
+		return a.Id == selfPlayerId
+	})
+	return players
 }
 
 type PlayerPicked struct {
