@@ -13,9 +13,9 @@ type GameState interface {
 	GetGame() *Game
 }
 
-type PlayerId interface {
+type PlayerTurn interface {
 	GameState
-	PlayerId() string
+	Player() Player
 }
 
 type Expires interface {
@@ -109,8 +109,8 @@ func newGameVoteTurn(game *Game, playerId string, candidates Players) *GameVoteT
 	}
 }
 
-func (self *GameVoteTurn) PlayerId() string {
-	return self.playerId
+func (self *GameVoteTurn) Player() Player {
+	return self.players.PlayerOrPanic(self.playerId)
 }
 
 func (self *GameVoteTurn) InitPlayerId() string {
@@ -243,8 +243,8 @@ func (self *GamePlayerTurn) InitVote() *GameVoteTurn {
 	return newGameVoteTurn(self.Game, self.playerId, self.players)
 }
 
-func (self *GamePlayerTurn) PlayerId() string {
-	return self.playerId
+func (self *GamePlayerTurn) Player() Player {
+	return self.players.PlayerOrPanic(self.playerId)
 }
 
 // records player synonym and passes turn to next
@@ -298,8 +298,8 @@ func (self *GamePlayerChooseWord) FromWords() []string {
 	return self.fromWords
 }
 
-func (self *GamePlayerChooseWord) PlayerId2() string {
-	return self.playerId
+func (self *GamePlayerChooseWord) Player2() Player {
+	return self.players.PlayerOrPanic(self.playerId)
 }
 
 func (self *GamePlayerChooseWord) Choose(index int) *GamePlayerTurn {

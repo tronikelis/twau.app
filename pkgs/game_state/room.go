@@ -55,7 +55,7 @@ func (self *Room) GameLoop(bytes []byte, playerId string) error {
 		self.StateRef(func(state *GameState) {
 			game := (*state).(*GamePlayerChooseWord)
 
-			if game.PlayerId2() != playerId {
+			if game.Player2().Id != playerId {
 				return
 			}
 
@@ -70,7 +70,7 @@ func (self *Room) GameLoop(bytes []byte, playerId string) error {
 		self.StateRef(func(state *GameState) {
 			game := (*state).(*GamePlayerTurn)
 
-			if game.PlayerId() != playerId {
+			if game.Player().Id != playerId {
 				return
 			}
 
@@ -82,7 +82,7 @@ func (self *Room) GameLoop(bytes []byte, playerId string) error {
 		self.StateRef(func(state *GameState) {
 			game := (*state).(*GamePlayerTurn)
 
-			if game.PlayerId() != playerId {
+			if game.Player().Id != playerId {
 				return
 			}
 
@@ -101,7 +101,7 @@ func (self *Room) GameLoop(bytes []byte, playerId string) error {
 		self.StateRef(func(state *GameState) {
 			game := (*state).(*GameVoteTurn)
 
-			if game.PlayerId() != playerId {
+			if game.Player().Id != playerId {
 				return
 			}
 

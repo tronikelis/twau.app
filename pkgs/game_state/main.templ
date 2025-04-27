@@ -93,7 +93,7 @@ templ stateGame(state *Game) {
 }
 
 templ stateGamePlayerChooseWord(state *GamePlayerChooseWord, selfPlayerId string) {
-	if  state.Players().PlayerOrPanic(state.PlayerId2()).Id == selfPlayerId {
+	if state.Player2().Id == selfPlayerId {
 		for i, v := range state.FromWords() {
 			<button
 				class="w-full"
@@ -114,7 +114,7 @@ templ stateGamePlayerChooseWord(state *GamePlayerChooseWord, selfPlayerId string
 }
 
 templ stateGamePlayerTurn(state *GamePlayerTurn, selfPlayerId string) {
-	if state.Players().PlayerOrPanic(state.PlayerId()).Id == selfPlayerId {
+	if state.Player().Id == selfPlayerId {
 		<p>It's your turn, what do you want to do?</p>
 		<div class="flex flex-col gap-8">
 			<form
@@ -149,7 +149,7 @@ templ stateGamePlayerTurn(state *GamePlayerTurn, selfPlayerId string) {
 		</div>
 	} else {
 		<p>
-			Wait for { state.Players().PlayerOrPanic(state.PlayerId()).Name } to
+			Wait for { state.Player().Name } to
 			make his decision
 		</p>
 	}
@@ -218,7 +218,7 @@ templ stateGameVoteTurn(state *GameVoteTurn, selfPlayerId string) {
 		</span>
 	</h4>
 	@playerPicks(state.Picks())
-	if state.Game.Players().PlayerOrPanic(state.PlayerId()).Id == selfPlayerId {
+	if state.Player().Id == selfPlayerId {
 		<h4 class="mt-2">Who is the imposter?</h4>
 		<div class="flex flex-row gap-4 flex-wrap">
 			for _, v := range state.Candidates(selfPlayerId) {
@@ -235,7 +235,7 @@ templ stateGameVoteTurn(state *GameVoteTurn, selfPlayerId string) {
 			}
 		</div>
 	} else {
-		Wait for { state.Game.Players().PlayerOrPanic(state.PlayerId()).Name } to choose the imposter
+		Wait for { state.Player().Name } to choose the imposter
 	}
 }
 
@@ -342,9 +342,9 @@ templ partialPlayers(state GameState, selfPlayerId string) {
 		<h2>Players</h2>
 		<div class="flex flex-row flex-wrap items-center gap-4 *:min-w-64 *:flex-1">
 			switch state := state.(type) {
-				case PlayerId:
+				case PlayerTurn:
 					for i, v := range state.GetGame().Players().Players() {
-						@playerCard(v, state.PlayerId() == v.Id, i, selfPlayerId) {
+						@playerCard(v, state.Player().Id == v.Id, i, selfPlayerId) {
 							{ v.Name }
 						}
 					}
