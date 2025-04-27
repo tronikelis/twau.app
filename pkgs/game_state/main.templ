@@ -3,20 +3,6 @@ package game_state
 import "fmt"
 import "time"
 
-var playerIndexClass = []string{
-	"player-red",
-	"player-green",
-	"player-blue",
-	"player-brown",
-	"player-pink",
-	"player-purple",
-	"player-black",
-}
-
-func getPlayerIndexClass(index int) string {
-	return playerIndexClass[index%len(playerIndexClass)]
-}
-
 templ PartialGameState(state GameState, selfPlayerId string) {
 	<div id="game_state" class="grid grid-cols-6 gap-8" hx-swap-oob="outerHTML">
 		if state != nil {
@@ -43,7 +29,7 @@ templ partialChat(state GameState) {
 						v := state.GetGame().Synonyms()[i]
 					}}
 					<div class="flex flex-col gap-1">
-						<p class={ "font-bold", getPlayerIndexClass(0) }>
+						<p class={ "font-bold", state.GetGame().Players().PlayerOrPanic(v.PlayerId).CssClass }>
 							{ state.GetGame().players.PlayerOrPanic(v.PlayerId).Name }:
 						</p>
 						<p>
@@ -61,12 +47,12 @@ templ playerPicks(picks []*PlayerPicked) {
 		for _, v := range picks {
 			<div class="border p-2 flex flex-col gap-1">
 				<p class="font-bold mb-1">
-					<span class={ getPlayerIndexClass(0) }>{ v.Player.Name }</span>
+					<span class={ v.Player.CssClass }>{ v.Player.Name }</span>
 					↓
 				</p>
 				<div class="flex flex-row gap-1 flex-wrap">
 					for i, x := range v.PickedBy {
-						<p class={ getPlayerIndexClass(0) }>
+						<p class={ x.CssClass }>
 							{ x.Name }
 							if i != len(v.PickedBy)-1 {
 								{ " •" }
@@ -162,7 +148,7 @@ templ stateGameImposterWon(state *GameImposterWon) {
 	@playerPicks(state.Picks())
 	<p>
 		Imposter was
-		<span class={ "font-bold italic", getPlayerIndexClass(0) }>
+		<span class={ "font-bold italic", state.Imposter().CssClass }>
 			{ state.Imposter().Name }
 		</span>
 	</p>
@@ -189,7 +175,7 @@ templ stateGameCrewmateWon(state *GameCrewmateWon) {
 	@playerPicks(state.Picks())
 	<p>
 		Imposter was
-		<span class={ "font-bold italic", getPlayerIndexClass(0) }>
+		<span class={ "font-bold italic", state.Imposter().CssClass }>
 			{ state.Imposter().Name }
 		</span>
 	</p>
@@ -213,7 +199,7 @@ templ stateGameVoteTurn(state *GameVoteTurn, selfPlayerId string) {
 	<h3>Votes</h3>
 	<h4>
 		Initialized by
-		<span class={ getPlayerIndexClass(0) }>
+		<span class={ state.GetGame().Players().PlayerOrPanic(state.InitPlayerId()).CssClass }>
 			{ state.GetGame().Players().PlayerOrPanic(state.InitPlayerId()).Name }
 		</span>
 	</h4>
@@ -223,7 +209,7 @@ templ stateGameVoteTurn(state *GameVoteTurn, selfPlayerId string) {
 		<div class="flex flex-row gap-4 flex-wrap">
 			for _, v := range state.Candidates(selfPlayerId) {
 				<button
-					class={ "w-full", getPlayerIndexClass(0) }
+					class={ "w-full", v.CssClass }
 					type="button"
 					ws-send
 					hx-vals={ SerializeJsonPanic(
@@ -318,7 +304,7 @@ templ playerCard(player Player, turn bool, index int, selfPlayerId string) {
 			templ.KV("border-dotted", player.Id == selfPlayerId),
 		}
 	>
-		<p class={ getPlayerIndexClass(0) }>
+		<p class={ player.CssClass }>
 			{ children... }
 		</p>
 		if player.Id == selfPlayerId {

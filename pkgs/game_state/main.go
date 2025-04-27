@@ -35,7 +35,7 @@ func newPlayerSynonym(synonym string, playerId string) PlayerSynonym {
 }
 
 type Game struct {
-	players   Players
+	players   *Players
 	randomInt random.RandomIntNotSame
 	word      string
 	synonyms  []PlayerSynonym
@@ -50,7 +50,7 @@ func NewGame() *Game {
 	}
 }
 
-func (self *Game) Players() Players {
+func (self *Game) Players() *Players {
 	return self.players
 }
 
@@ -97,10 +97,10 @@ type GameVoteTurn struct {
 	picks        []playerVotePick
 	playerId     string
 	initPlayerId string
-	candidates   Players
+	candidates   *Players
 }
 
-func newGameVoteTurn(game *Game, playerId string, candidates Players) *GameVoteTurn {
+func newGameVoteTurn(game *Game, playerId string, candidates *Players) *GameVoteTurn {
 	return &GameVoteTurn{
 		Game:         game,
 		playerId:     playerId,
