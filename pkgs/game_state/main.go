@@ -120,7 +120,7 @@ func (self *GameVoteTurn) InitPlayerId() string {
 // returns new game state
 func (self *GameVoteTurn) Vote(playerId string) (GameState, bool) {
 	self.picks = append(self.picks, playerVotePick{
-		playerId: playerId,
+		playerId: self.playerId,
 		pickedId: playerId,
 	})
 	self.playerId = self.players.NextFrom(self.playerId).Id
@@ -148,6 +148,17 @@ func (self *GameVoteTurn) Vote(playerId string) (GameState, bool) {
 
 		// return tied players
 		if len(votedPlayerIds) != 1 {
+			// if imposter is not part of this list, means he won
+			imposterInList := false
+			for _, v := range votedPlayerIds {
+				if self.Imposter().Id == v {
+					imposterInList = true
+				}
+			}
+			if !imposterInList {
+				return newGameImposterWon(self.Game, self), true
+			}
+
 			candidates := newPlayers()
 			for _, v := range votedPlayerIds {
 				candidates.Add(self.players.PlayerOrPanic(v))
