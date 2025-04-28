@@ -8,4 +8,5 @@ import (
 
 func Register(s *maruchi.Server) {
 	s.GET("/{$}", req.WithReqContext(getIndex))
+	s.Route("", "/hx/players/edit_name", req.WithReqContext(allHxEditPlayerName))
 }

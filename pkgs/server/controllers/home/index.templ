@@ -2,6 +2,45 @@ package home
 
 import "twau.app/pkgs/ui"
 
+templ partialPlayerName(playerName string) {
+	<div hx-target="this" hx-swap="outerHTML">
+		if playerName == "" {
+			<div class="form-group">
+				<label>Your Name *</label>
+				<input class="input-block" type="text" name="player_name" placeholder="CoolPlayer227" required/>
+			</div>
+		} else {
+			<div class="flex flex-row gap-4 items-center">
+				<h4>Your name is: <span class="italic font-bold">{ playerName }</span></h4>
+				<button
+					type="button"
+					hx-get="/hx/players/edit_name"
+					hx-disabled-elt="this"
+				>Edit</button>
+			</div>
+		}
+	</div>
+}
+
+templ partialEditPlayerName(playerName string) {
+	<form
+		hx-put="/hx/players/edit_name"
+		hx-target="this"
+		hx-swap="outerHTML"
+		class="flex flex-col"
+	>
+		<div class="form-group">
+			<label>Your Name *</label>
+			<input value={ playerName } class="input-block" type="text" name="player_name" placeholder="CoolPlayer227" required/>
+		</div>
+		<div class="flex flex-row justify-end">
+			<button type="submit" hx-disabled-elt="this">
+				Save
+			</button>
+		</div>
+	</form>
+}
+
 templ pageIndex(playerName string) {
 	@ui.Page() {
 		<div class="container flex flex-row justify-center">
@@ -18,15 +57,8 @@ templ pageIndex(playerName string) {
 					<a href="/about">About the game</a>
 				</h4>
 				<hr/>
-				<div class="flex flex-col">
-					if playerName == "" {
-						<div class="form-group">
-							<label>Your Name *</label>
-							<input class="input-block" type="text" name="player_name" placeholder="CoolPlayer227" required/>
-						</div>
-					} else {
-						<h4>Your name is: <span class="italic font-bold">{ playerName }</span></h4>
-					}
+				<div class="flex flex-col gap-8">
+					@partialPlayerName(playerName)
 					<div class="flex flex-row justify-end">
 						<button type="submit">Create room</button>
 					</div>

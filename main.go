@@ -68,6 +68,11 @@ func main() {
 		}).
 		Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
+	server.Middleware(func(ctx maruchi.ReqContext, next maruchi.Handler) {
+		ctx.Writer().Header().Set("content-type", "text/html; charset=utf-8")
+		next(ctx)
+	})
+
 	server.Middleware(req.MiddlewareReqContext(game_state.NewRooms(), env.Secret))
 
 	controllers.Register(server)
