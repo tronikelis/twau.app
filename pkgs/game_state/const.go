@@ -46,7 +46,7 @@ var buildingWords = []string{
 }
 
 var animalWords = []string{
-	"penguin",
+	"penguin (linuxer) 🐧❤️",
 	"dog",
 	"cat",
 	"lion",
