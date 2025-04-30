@@ -87,6 +87,7 @@ func (self *Game) Start() *GamePlayerChooseCategory {
 	self.word = ""
 	self.synonyms = nil
 	self.players.ClearOffline()
+	self.category = Category{}
 
 	self.imposterId = self.players.Index(self.randomInt.IntN(self.players.Len())).Id
 	playerId := self.players.Index(self.randomInt.IntN(self.players.Len())).Id
