@@ -1,6 +1,7 @@
 package game_state
 
 import (
+	"fmt"
 	"slices"
 	"time"
 
@@ -38,6 +39,7 @@ type Game struct {
 	players   *Players
 	randomInt random.RandomIntNotSame
 	word      string
+	category  Category
 	synonyms  []PlayerSynonym
 	// ඞ
 	imposterId string
@@ -48,6 +50,10 @@ func NewGame() *Game {
 		randomInt: random.NewRandomIntNotSame(3),
 		players:   newPlayers(),
 	}
+}
+
+func (self *Game) Category() Category {
+	return self.category
 }
 
 func (self *Game) Players() *Players {
@@ -76,15 +82,21 @@ func (self *Game) GetGame() *Game {
 	return self
 }
 
-func (self *Game) Start() *GamePlayerChooseWord {
+func (self *Game) Start() *GamePlayerChooseCategory {
 	// clean garbanzo
 	self.word = ""
 	self.synonyms = nil
 	self.players.ClearOffline()
+	self.category = Category{}
 
 	self.imposterId = self.players.Index(self.randomInt.IntN(self.players.Len())).Id
+	playerId := self.players.Index(self.randomInt.IntN(self.players.Len())).Id
 
-	return newGamePlayerChooseWord(self)
+	if self.imposterId == playerId {
+		playerId = self.players.NextFrom(playerId).Id
+	}
+
+	return newGamePlayerChooseCategory(self, playerId, allCategories)
 }
 
 type playerVotePick struct {
@@ -284,24 +296,55 @@ func (self *GamePlayerTurn) SaySynonym(synonym string) (GameState, bool) {
 	return nil, false
 }
 
+type GamePlayerChooseCategory struct {
+	*Game
+	playerId       string
+	fromCategories []Category
+}
+
+func newGamePlayerChooseCategory(game *Game, playerId string, fromCategories []Category) *GamePlayerChooseCategory {
+	return &GamePlayerChooseCategory{
+		Game:           game,
+		playerId:       playerId,
+		fromCategories: fromCategories,
+	}
+}
+
+func (self *GamePlayerChooseCategory) Player() Player {
+	return self.players.PlayerOrPanic(self.playerId)
+}
+
+func (self *GamePlayerChooseCategory) FromCategories() []Category {
+	return self.fromCategories
+}
+
+func (self *GamePlayerChooseCategory) Choose(categoryId int) (*GamePlayerChooseWord, error) {
+	var category Category
+	for _, v := range allCategories {
+		if v.Id == categoryId {
+			category = v
+			break
+		}
+	}
+	if category.Id == 0 {
+		return nil, fmt.Errorf("category %d not found", categoryId)
+	}
+
+	self.category = category
+	return newGamePlayerChooseWord(self.Game, self.playerId, randomN(category.Words, 4)), nil
+}
+
 type GamePlayerChooseWord struct {
 	*Game
 	playerId  string
 	fromWords []string
 }
 
-func newGamePlayerChooseWord(game *Game) *GamePlayerChooseWord {
-	player := game.players.Index(game.randomInt.IntN(game.players.Len()))
-
-	// making imposter choose the word just does not make sense
-	if player.Id == game.imposterId {
-		player = game.players.NextFrom(player.Id)
-	}
-
+func newGamePlayerChooseWord(game *Game, playerId string, fromWords []string) *GamePlayerChooseWord {
 	return &GamePlayerChooseWord{
 		Game:      game,
-		fromWords: allWords.randomN(4),
-		playerId:  player.Id,
+		fromWords: fromWords,
+		playerId:  playerId,
 	}
 }
 

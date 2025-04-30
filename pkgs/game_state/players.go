@@ -149,7 +149,7 @@ func (self *Players) Len() int {
 func (self *Players) NextFrom(id string) Player {
 	player, ok := self.playerPtrs[id]
 	if !ok {
-		return Player{}
+		panic(fmt.Sprintf("NextFrom id %s not found", id))
 	}
 
 	player = player.Next()

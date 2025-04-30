@@ -8,6 +8,7 @@ const (
 	ActionPlayerSaySynonym
 	ActionInitVote
 	ActionVote
+	ActionPlayerChooseCategory
 )
 
 type Action struct {
@@ -75,5 +76,17 @@ func NewActionVoteJson(playerId string) ActionVoteJson {
 	return ActionVoteJson{
 		Action:   Action{ActionVote},
 		PlayerId: playerId,
+	}
+}
+
+type ActionPlayerChooseCategoryJson struct {
+	Action
+	CategoryId int `json:"category_id"`
+}
+
+func NewActionPlayerChooseCategoryJson(categoryId int) ActionPlayerChooseCategoryJson {
+	return ActionPlayerChooseCategoryJson{
+		Action:     Action{ActionPlayerChooseCategory},
+		CategoryId: categoryId,
 	}
 }

@@ -70,10 +70,11 @@ func handleWsId(
 	log.Println(fmt.Sprintf("%s connected, [%s]", player.Name, player.Id))
 
 	room.AddPlayer(conn, game_state.NewPlayer(player.Id, player.Name))
-	defer room.State(func(state game_state.GameState) {
+	defer room.State(func(state game_state.GameState) error {
 		if state.GetGame().Players().Online() == 0 {
 			ctx.Rooms.QueueDelete(roomId)
 		}
+		return nil
 	})
 	defer room.RemovePlayer(conn, player.Id)
 
