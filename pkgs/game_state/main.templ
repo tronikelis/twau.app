@@ -96,6 +96,7 @@ templ stateGame(state *Game) {
 
 templ stateGamePlayerChooseWord(state *GamePlayerChooseWord, selfPlayerId string) {
 	if state.Player2().Id == selfPlayerId {
+		<h3>Choose word</h3>
 		for i, v := range state.FromWords() {
 			<button
 				class="w-full"
