@@ -225,6 +225,28 @@ templ stateGameVoteTurn(state *GameVoteTurn, selfPlayerId string) {
 	}
 }
 
+templ stateGamePlayerChooseCategory(state *GamePlayerChooseCategory, selfPlayerId string) {
+	if state.Player().Id == selfPlayerId {
+		<h3>Choose category</h3>
+		for _, v := range state.FromCategories() {
+			<button
+				class="w-full"
+				type="button"
+				ws-send
+				hx-vals={ SerializeJsonPanic(
+					NewActionPlayerChooseCategoryJson(v.Id),
+				) }
+			>
+				{ v.Name }
+			</button>
+		}
+	} else {
+		<p>
+			Wait for [REDACTED] to choose a category
+		</p>
+	}
+}
+
 templ partialPlayerAction(state GameState, selfPlayerId string) {
 	<div class="flex flex-col gap-4">
 		<h2>
@@ -241,6 +263,8 @@ templ partialPlayerAction(state GameState, selfPlayerId string) {
 					switch state.(type) {
 						case *Game:
 							Pre game
+						case *GamePlayerChooseCategory:
+							Player choosing category
 						case *GamePlayerChooseWord:
 							Player choosing word
 						case *GamePlayerTurn:
@@ -278,6 +302,14 @@ templ partialPlayerAction(state GameState, selfPlayerId string) {
 					</span>
 				</p>
 			}
+			if state.GetGame().Category().Id != 0 {
+				<p>
+					Category:
+					<span class="text-muted italic">
+						{ state.GetGame().Category().Name }
+					</span>
+				</p>
+			}
 		</div>
 		switch state := state.(type) {
 			case *Game:
@@ -292,6 +324,8 @@ templ partialPlayerAction(state GameState, selfPlayerId string) {
 				@stateGameCrewmateWon(state)
 			case *GameVoteTurn:
 				@stateGameVoteTurn(state, selfPlayerId)
+			case *GamePlayerChooseCategory:
+				@stateGamePlayerChooseCategory(state, selfPlayerId)
 		}
 	</div>
 }

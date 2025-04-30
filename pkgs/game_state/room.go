@@ -109,6 +109,26 @@ func (self *Room) GameLoop(bytes []byte, playerId string) error {
 				*state = newState
 			}
 		})
+	case ActionPlayerChooseCategory:
+		var action ActionPlayerChooseCategoryJson
+		if err := json.Unmarshal(bytes, &action); err != nil {
+			return err
+		}
+
+		self.StateRef(func(state *GameState) {
+			game := (*state).(*GamePlayerChooseCategory)
+
+			if game.Player().Id != playerId {
+				return
+			}
+
+			newState, err := game.Choose(action.CategoryId)
+			if err != nil {
+				// return err
+			}
+
+			*state = newState
+		})
 	default:
 		return ErrUnknownAction
 	}
