@@ -12,9 +12,11 @@ templ PartialGameState(state GameState, selfPlayerId string) {
 					@partialPlayerAction(state, selfPlayerId)
 				</div>
 			</div>
-			<div class="-order-2 lg:order-0 col-span-6 lg:col-span-1 min-h-60 lg:min-h-80">
-				@partialAllWords(state)
-			</div>
+			if state.GetGame().Imposter().Id == selfPlayerId {
+				<div class="-order-2 lg:order-0 col-span-6 lg:col-span-1 min-h-60 lg:min-h-80">
+					@partialAllWords(state)
+				</div>
+			}
 			<div class="-order-1 lg:order-0 col-span-6 lg:col-span-2 min-h-60 lg:min-h-80">
 				@partialChat(state)
 			</div>
