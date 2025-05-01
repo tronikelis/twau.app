@@ -41,7 +41,7 @@ func (self NormalizedRandom) increment(i int) {
 	self.counts[i] = prev + 1
 }
 
-// [0.1, 0.9]
+// [0.05, 0.95]
 func (self NormalizedRandom) normalized() []float64 {
 	highest := -1
 	for _, v := range self.counts {
