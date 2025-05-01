@@ -52,7 +52,7 @@ func (self Rooms) Room(roomId string) (*Room, bool) {
 	return room.room, true
 }
 
-func (self Rooms) CreateRoom() (*Room, string) {
+func (self Rooms) CreateRoom(password string) (*Room, string) {
 	var roomId string
 	for {
 		roomId = random.RandomB64(6)
@@ -64,7 +64,7 @@ func (self Rooms) CreateRoom() (*Room, string) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	room := NewRoom()
+	room := NewRoom(password)
 	self.statesById[roomId] = &roomWithDeleteChan{
 		room: room,
 	}

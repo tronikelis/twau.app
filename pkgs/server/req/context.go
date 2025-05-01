@@ -26,9 +26,27 @@ type Player struct {
 	Name string
 }
 
-func (self ReqContext) SetPlayer(name string) error {
-	name = base64.StdEncoding.EncodeToString([]byte(name))
+func (self ReqContext) SetCookie(cookie *http.Cookie) {
+	cookie.Value = base64.StdEncoding.EncodeToString([]byte(cookie.Value))
+	http.SetCookie(self.Writer(), cookie)
+}
 
+func (self ReqContext) Cookie(name string) (*http.Cookie, error) {
+	cookie, err := self.Req().Cookie(name)
+	if err != nil {
+		return nil, err
+	}
+
+	value, err := base64.StdEncoding.DecodeString(cookie.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	cookie.Value = string(value)
+	return cookie, nil
+}
+
+func (self ReqContext) SetPlayer(name string) error {
 	playerId := random.RandomB64(16)
 
 	playerIdSigned, err := auth.SignStringB64(playerId, self.SecretKey)
@@ -42,8 +60,8 @@ func (self ReqContext) SetPlayer(name string) error {
 	playerNameCookie := CookiePlayerName
 	playerNameCookie.Value = name
 
-	http.SetCookie(self.Writer(), &playerIdCookie)
-	http.SetCookie(self.Writer(), &playerNameCookie)
+	self.SetCookie(&playerIdCookie)
+	self.SetCookie(&playerNameCookie)
 
 	return nil
 }
@@ -55,17 +73,17 @@ func (self ReqContext) ClearPlayer() {
 	playerIdCookie := CookiePlayerId
 	playerIdCookie.MaxAge = -1
 
-	http.SetCookie(self.Writer(), &playerNameCookie)
-	http.SetCookie(self.Writer(), &playerIdCookie)
+	self.SetCookie(&playerNameCookie)
+	self.SetCookie(&playerIdCookie)
 }
 
 func (self ReqContext) Player() (Player, error) {
-	playerIdCookie, err := self.Req().Cookie(CookiePlayerId.Name)
+	playerIdCookie, err := self.Cookie(CookiePlayerId.Name)
 	if err != nil {
 		return Player{}, err
 	}
 
-	playerNameCookie, err := self.Req().Cookie(CookiePlayerName.Name)
+	playerNameCookie, err := self.Cookie(CookiePlayerName.Name)
 	if err != nil {
 		return Player{}, err
 	}
@@ -84,14 +102,9 @@ func (self ReqContext) Player() (Player, error) {
 		return Player{}, fmt.Errorf("unauthorized player id cookie")
 	}
 
-	name, err := base64.StdEncoding.DecodeString(playerNameCookie.Value)
-	if err != nil {
-		return Player{}, err
-	}
-
 	return Player{
 		Id:   playerId,
-		Name: string(name),
+		Name: playerNameCookie.Value,
 	}, nil
 }
 

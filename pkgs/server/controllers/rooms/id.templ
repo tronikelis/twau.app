@@ -6,17 +6,28 @@ import (
 	"twau.app/pkgs/ui"
 )
 
-templ pagePlayerCreate(roomId string) {
+templ pagePlayerRoomJoin(roomId string, playerName string, passwordRequired bool) {
 	@ui.Page() {
-		<form
-			hx-post={ ui.StringURL(fmt.Sprintf("/rooms/%s", roomId)) }
-			class="flex flex-row items-center gap-2"
-		>
-			<input type="text" name="player_name" placeholder="Your name" required/>
-			<button type="submit">
-				Join
-			</button>
-		</form>
+		<div class="container flex flex-row justify-center">
+			<form
+				hx-post={ ui.StringURL(fmt.Sprintf("/rooms/%s", roomId)) }
+				class="flex flex-col items-center gap-2"
+			>
+				if passwordRequired {
+					<div class="form-group">
+						<label>Password*?</label>
+						<input type="password" name="room_password" placeholder="***"/>
+					</div>
+				}
+				<div class="form-group">
+					<label>Your name?</label>
+					<input value={ playerName } type="text" name="player_name" placeholder="Nice" required/>
+				</div>
+				<button type="submit">
+					Join
+				</button>
+			</form>
+		</div>
 	}
 }
 

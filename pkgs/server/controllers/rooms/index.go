@@ -8,8 +8,9 @@ import (
 
 func postIndex(ctx req.ReqContext) error {
 	playerName := ctx.Req().PostFormValue("player_name")
+	roomPassword := ctx.Req().PostFormValue("room_password")
 
-	_, roomId := ctx.Rooms.CreateRoom()
+	_, roomId := ctx.Rooms.CreateRoom(roomPassword)
 
 	_, err := ctx.Player()
 	if err != nil {
@@ -19,6 +20,10 @@ func postIndex(ctx req.ReqContext) error {
 	}
 
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))
+
+	roomPasswordCookie := req.CookieRoomPassword
+	roomPasswordCookie.Value = roomPassword
+	ctx.SetCookie(&roomPasswordCookie)
 
 	return nil
 }
