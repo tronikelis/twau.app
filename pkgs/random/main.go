@@ -2,22 +2,14 @@ package random
 
 import (
 	"crypto/rand"
-	"encoding/hex"
+	"encoding/base64"
 	rand2 "math/rand/v2"
 )
 
-const (
-	LengthPlayerId = 16
-	LengthRoomId   = 16
-)
-
-func RandomHex(length int) (string, error) {
-	b := make([]byte, length)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-
-	return hex.EncodeToString(b), nil
+func RandomB64(bytes int) string {
+	b := make([]byte, bytes)
+	rand.Read(b)
+	return base64.URLEncoding.EncodeToString(b)
 }
 
 type NormalizedRandom struct {

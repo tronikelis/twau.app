@@ -29,9 +29,9 @@ type Player struct {
 func (self ReqContext) SetPlayer(name string) error {
 	name = base64.StdEncoding.EncodeToString([]byte(name))
 
-	playerId, err := random.RandomHex(random.LengthPlayerId)
+	playerId := random.RandomB64(16)
 
-	playerIdSigned, err := auth.SignStringHex(playerId, self.SecretKey)
+	playerIdSigned, err := auth.SignStringB64(playerId, self.SecretKey)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (self ReqContext) Player() (Player, error) {
 		return Player{}, fmt.Errorf("invalid player id cookie")
 	}
 
-	playerIdSigned2, err := auth.SignStringHex(playerId, self.SecretKey)
+	playerIdSigned2, err := auth.SignStringB64(playerId, self.SecretKey)
 	if err != nil {
 		return Player{}, err
 	}

@@ -4,6 +4,8 @@ import (
 	"log"
 	"sync"
 	"time"
+
+	"twau.app/pkgs/random"
 )
 
 type roomWithDeleteChan struct {
@@ -50,10 +52,13 @@ func (self Rooms) Room(roomId string) (*Room, bool) {
 	return room.room, true
 }
 
-// creates a room, or returns (zero, false) if room exists
-func (self Rooms) CreateRoom(roomId string) (*Room, bool) {
-	if self.HasRoom(roomId) {
-		return nil, false
+func (self Rooms) CreateRoom() (*Room, string) {
+	var roomId string
+	for {
+		roomId = random.RandomB64(6)
+		if !self.HasRoom(roomId) {
+			break
+		}
 	}
 
 	self.mu.Lock()
@@ -64,7 +69,7 @@ func (self Rooms) CreateRoom(roomId string) (*Room, bool) {
 		room: room,
 	}
 
-	return room, true
+	return room, roomId
 }
 
 func (self Rooms) QueueDelete(roomId string) {

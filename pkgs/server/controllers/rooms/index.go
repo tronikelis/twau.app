@@ -3,24 +3,15 @@ package rooms
 import (
 	"fmt"
 
-	"twau.app/pkgs/random"
 	"twau.app/pkgs/server/req"
 )
 
 func postIndex(ctx req.ReqContext) error {
 	playerName := ctx.Req().PostFormValue("player_name")
 
-	roomId, err := random.RandomHex(random.LengthRoomId)
-	if err != nil {
-		return err
-	}
+	_, roomId := ctx.Rooms.CreateRoom()
 
-	_, ok := ctx.Rooms.CreateRoom(roomId)
-	if !ok {
-		return req.ErrRoomExists
-	}
-
-	_, err = ctx.Player()
+	_, err := ctx.Player()
 	if err != nil {
 		if err := ctx.SetPlayer(playerName); err != nil {
 			return err
