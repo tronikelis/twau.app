@@ -28,7 +28,7 @@ func NewNormalizedRandom(n int) NormalizedRandom {
 	counts := make([]int, n)
 	for i := range counts {
 		// make sure to initialize counts to non 0, as they will be divided by
-		counts[i] = rand2.IntN(100) + 1
+		counts[i] = rand2.IntN(5) + 1
 	}
 
 	return NormalizedRandom{
