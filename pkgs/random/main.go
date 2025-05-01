@@ -20,31 +20,71 @@ func RandomHex(length int) (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-type RandomIntNotSame struct {
-	previous int
-	margin   int
+type NormalizedRandom struct {
+	counts []int
 }
 
-// margin tells how many times to try to get a different int than the previous,
-// increasing the value decreases the chance to get the same number
-func NewRandomIntNotSame(margin int) RandomIntNotSame {
-	return RandomIntNotSame{
-		previous: -1,
-		margin:   margin,
+func NewNormalizedRandom(n int) NormalizedRandom {
+	counts := make([]int, n)
+	for i := range counts {
+		// make sure to initialize counts to non 0, as they will be divided by
+		counts[i] = rand2.IntN(100) + 1
+	}
+
+	return NormalizedRandom{
+		counts: counts,
 	}
 }
 
-func (self *RandomIntNotSame) IntN(n int) int {
-	var randomInt int
+func (self NormalizedRandom) increment(i int) {
+	prev := self.counts[i]
+	self.counts[i] = prev + 1
+}
 
-	for range self.margin + 1 {
-		randomInt = rand2.IntN(n)
-		if randomInt != self.previous {
-			self.previous = randomInt
-			return randomInt
+// [0.05, 0.95]
+func (self NormalizedRandom) normalized() []float64 {
+	highest := -1
+	for _, v := range self.counts {
+		if v > highest {
+			highest = v
 		}
 	}
 
-	self.previous = randomInt
-	return randomInt
+	normalized := make([]float64, len(self.counts))
+	for i, v := range self.counts {
+		normalized[i] = 1 - (float64(v) / float64(highest))
+
+		switch {
+		case normalized[i] < 0.05:
+			normalized[i] = 0.05
+		case normalized[i] > 0.95:
+			normalized[i] = 0.95
+		}
+	}
+
+	return normalized
+}
+
+// returns [0, n)
+func (self NormalizedRandom) Int() int {
+	normalized := self.normalized()
+
+	highestI := 0
+	highestV := float64(-1)
+
+	randFloat := rand2.Float64()
+	for i, v := range normalized {
+		if highestV < v {
+			highestV = v
+			highestI = i
+		}
+
+		if randFloat <= v {
+			self.increment(i)
+			return i
+		}
+	}
+
+	self.increment(highestI)
+	return highestI
 }

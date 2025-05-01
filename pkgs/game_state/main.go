@@ -36,19 +36,18 @@ func newPlayerSynonym(synonym string, playerId string) PlayerSynonym {
 }
 
 type Game struct {
-	players   *Players
-	randomInt random.RandomIntNotSame
-	word      string
-	category  Category
-	synonyms  []PlayerSynonym
+	players          *Players
+	normalizedRandom random.NormalizedRandom
+	word             string
+	category         Category
+	synonyms         []PlayerSynonym
 	// ඞ
 	imposterId string
 }
 
 func NewGame() *Game {
 	return &Game{
-		randomInt: random.NewRandomIntNotSame(3),
-		players:   newPlayers(),
+		players: newPlayers(),
 	}
 }
 
@@ -89,8 +88,10 @@ func (self *Game) Start() *GamePlayerChooseCategory {
 	self.players.ClearOffline()
 	self.category = Category{}
 
-	self.imposterId = self.players.Index(self.randomInt.IntN(self.players.Len())).Id
-	playerId := self.players.Index(self.randomInt.IntN(self.players.Len())).Id
+	self.normalizedRandom = random.NewNormalizedRandom(self.players.Len())
+
+	self.imposterId = self.players.Index(self.normalizedRandom.Int()).Id
+	playerId := self.players.Index(self.normalizedRandom.Int()).Id
 
 	if self.imposterId == playerId {
 		playerId = self.players.NextFrom(playerId).Id
@@ -362,7 +363,7 @@ func (self *GamePlayerChooseWord) Choose(index int) *GamePlayerTurn {
 	}
 
 	self.word = self.fromWords[index]
-	player := self.players.Index(self.randomInt.IntN(self.players.Len()))
+	player := self.players.Index(self.normalizedRandom.Int())
 	return newGamePlayerTurn(self.Game, player.Id)
 }
 
