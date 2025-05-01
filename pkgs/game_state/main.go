@@ -311,7 +311,7 @@ func newGamePlayerChooseCategory(game *Game, playerId string, fromCategories []C
 	}
 }
 
-func (self *GamePlayerChooseCategory) Player() Player {
+func (self *GamePlayerChooseCategory) Player2() Player {
 	return self.players.PlayerOrPanic(self.playerId)
 }
 

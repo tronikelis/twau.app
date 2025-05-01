@@ -131,7 +131,7 @@ func (self *Room) GameLoop(bytes []byte, playerId string) error {
 		if err := self.StateRef(func(state *GameState) error {
 			game := (*state).(*GamePlayerChooseCategory)
 
-			if game.Player().Id != playerId {
+			if game.Player2().Id != playerId {
 				return ErrNotYourTurn
 			}
 
