@@ -13,6 +13,7 @@ templ pagePlayerRoomJoin(roomId string, playerName string, passwordRequired bool
 				hx-post={ ui.StringURL(fmt.Sprintf("/rooms/%s", roomId)) }
 				class="flex flex-col items-center gap-2"
 			>
+				<h1>Join room <span class="text-muted">{ roomId }</span></h1>
 				if passwordRequired {
 					<div class="form-group">
 						<label>Password*?</label>
