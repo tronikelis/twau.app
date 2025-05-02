@@ -16,19 +16,25 @@ type Room struct {
 	unsafeState     GameState
 	mu              *sync.Mutex
 	stateChangeChan chan bool
+	password        string
 }
 
-func NewRoom() *Room {
+func NewRoom(password string) *Room {
 	room := &Room{
 		wsRoom:          ws.NewRoom(),
 		unsafeState:     NewGame(),
 		mu:              &sync.Mutex{},
 		stateChangeChan: make(chan bool),
+		password:        password,
 	}
 
 	go room.asyncListenStateChange()
 
 	return room
+}
+
+func (self *Room) Password() string {
+	return self.password
 }
 
 // the main game loop, events are as follows:

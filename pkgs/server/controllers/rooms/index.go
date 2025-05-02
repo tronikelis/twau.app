@@ -3,24 +3,16 @@ package rooms
 import (
 	"fmt"
 
-	"twau.app/pkgs/random"
 	"twau.app/pkgs/server/req"
 )
 
 func postIndex(ctx req.ReqContext) error {
 	playerName := ctx.Req().PostFormValue("player_name")
+	roomPassword := ctx.Req().PostFormValue("room_password")
 
-	roomId, err := random.RandomHex(random.LengthRoomId)
-	if err != nil {
-		return err
-	}
+	_, roomId := ctx.Rooms.CreateRoom(roomPassword)
 
-	_, ok := ctx.Rooms.CreateRoom(roomId)
-	if !ok {
-		return req.ErrRoomExists
-	}
-
-	_, err = ctx.Player()
+	_, err := ctx.Player()
 	if err != nil {
 		if err := ctx.SetPlayer(playerName); err != nil {
 			return err
@@ -28,6 +20,10 @@ func postIndex(ctx req.ReqContext) error {
 	}
 
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))
+
+	roomPasswordCookie := req.CookieRoomPassword
+	roomPasswordCookie.Value = roomPassword
+	ctx.SetCookie(&roomPasswordCookie)
 
 	return nil
 }

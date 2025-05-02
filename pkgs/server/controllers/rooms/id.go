@@ -17,6 +17,7 @@ func postId(ctx req.ReqContext) error {
 	roomId := ctx.Req().PathValue("id")
 
 	playerName := ctx.Req().PostFormValue("player_name")
+	roomPassword := ctx.Req().PostFormValue("room_password")
 
 	_, ok := ctx.Rooms.Room(roomId)
 	if !ok {
@@ -30,6 +31,10 @@ func postId(ctx req.ReqContext) error {
 		}
 	}
 
+	roomPasswordCookie := req.CookieRoomPassword
+	roomPasswordCookie.Value = roomPassword
+	ctx.SetCookie(&roomPasswordCookie)
+
 	ctx.Writer().Header().Set("hx-redirect", fmt.Sprintf("/rooms/%s", roomId))
 
 	return nil
@@ -38,17 +43,22 @@ func postId(ctx req.ReqContext) error {
 func getId(ctx req.ReqContext) error {
 	roomId := ctx.Req().PathValue("id")
 
-	if !ctx.Rooms.HasRoom(roomId) {
+	room, ok := ctx.Rooms.Room(roomId)
+	if !ok {
 		return req.ErrRoomDoesNotExist
 	}
 
-	_, err := ctx.Req().Cookie(req.CookiePlayerName.Name)
+	player, err := ctx.Player()
 	if err != nil {
-		return pagePlayerCreate(roomId).Render(ctx.Context(), ctx.Writer())
+		return pagePlayerRoomJoin(roomId, "", room.Password() != "").Render(ctx.Context(), ctx.Writer())
 	}
-	_, err = ctx.Req().Cookie(req.CookiePlayerId.Name)
-	if err != nil {
-		return pagePlayerCreate(roomId).Render(ctx.Context(), ctx.Writer())
+
+	roomPasswordCookie, _ := ctx.Cookie(req.CookieRoomPassword.Name)
+	if roomPasswordCookie == nil {
+		roomPasswordCookie = &http.Cookie{}
+	}
+	if room.Password() != "" && roomPasswordCookie.Value != room.Password() {
+		return pagePlayerRoomJoin(roomId, player.Name, true).Render(ctx.Context(), ctx.Writer())
 	}
 
 	return pageRoomId(roomId).Render(ctx.Context(), ctx.Writer())
@@ -105,6 +115,16 @@ func wsId(ctx req.ReqContext) error {
 	room, ok := ctx.Rooms.Room(roomId)
 	if !ok {
 		return req.ErrRoomDoesNotExist
+	}
+
+	if room.Password() != "" {
+		roomPasswordCookie, err := ctx.Cookie(req.CookieRoomPassword.Name)
+		if err != nil {
+			return err
+		}
+		if room.Password() != roomPasswordCookie.Value {
+			return req.ErrRoomPasswordIncorrect
+		}
 	}
 
 	conn, err := wsUpgrader.Upgrade(ctx.Writer(), ctx.Req(), nil)

@@ -59,6 +59,10 @@ templ pageIndex(playerName string) {
 				<hr/>
 				<div class="flex flex-col gap-8">
 					@partialPlayerName(playerName)
+					<div class="form-group *:w-full">
+						<label>Password (you can leave as empty)</label>
+						<input type="password" placeholder="Password" name="room_password"/>
+					</div>
 					<div class="flex flex-row justify-end">
 						<button type="submit">Create room</button>
 					</div>
